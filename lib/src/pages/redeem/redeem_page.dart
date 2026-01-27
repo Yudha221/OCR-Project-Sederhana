@@ -19,11 +19,17 @@ class _RedeemPageState extends State<RedeemPage> {
   bool _isScanning = false;
   bool _isVerified = false;
   bool _isVerifying = false;
+  bool _isRedeeming = false; // ✅ TAMBAHAN
 
   // DATA DARI API
   String ownerName = '';
   String ownerNik = '';
   int remainingQuota = 0;
+
+  // ✅ TAMBAHAN
+  int get _requiredQuota {
+    return _redeemType == 1 ? 1 : 2;
+  }
 
   @override
   void initState() {
@@ -162,6 +168,56 @@ class _RedeemPageState extends State<RedeemPage> {
     }
   }
 
+  // ================= REDEEM (POST API) ✅ TAMBAHAN
+  Future<void> _redeem() async {
+    if (!_isVerified) return;
+
+    if (remainingQuota < _requiredQuota) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Kuota tidak cukup. Butuh $_requiredQuota, sisa $remainingQuota',
+          ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      setState(() => _isRedeeming = true);
+
+      final response = await _redeemController.redeem(
+        serialNumber: _serialController.text.trim(),
+        redeemType: _redeemType,
+      );
+
+      if (response['success'] != true) {
+        throw Exception(response['message']);
+      }
+
+      final data = response['data'];
+
+      setState(() {
+        remainingQuota = int.tryParse(data['quotaRemaining'].toString()) ?? 0;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Redeem berhasil')));
+
+      if (remainingQuota <= 0) {
+        _resetVerification();
+        _serialController.clear();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Redeem gagal: $e')));
+    } finally {
+      setState(() => _isRedeeming = false);
+    }
+  }
+
   // ================= UI
   @override
   Widget build(BuildContext context) {
@@ -178,7 +234,6 @@ class _RedeemPageState extends State<RedeemPage> {
             ),
             const SizedBox(height: 20),
 
-            /// SERIAL
             const Text('Serial Number'),
             const SizedBox(height: 6),
             TextField(
@@ -200,7 +255,6 @@ class _RedeemPageState extends State<RedeemPage> {
 
             const SizedBox(height: 12),
 
-            /// SCAN BUTTON
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -212,7 +266,6 @@ class _RedeemPageState extends State<RedeemPage> {
 
             const SizedBox(height: 12),
 
-            /// VERIFY BUTTON
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -237,7 +290,6 @@ class _RedeemPageState extends State<RedeemPage> {
 
             const SizedBox(height: 20),
 
-            /// REDEEM TYPE
             const Text('Redeem Type'),
             RadioListTile<int>(
               value: 1,
@@ -256,7 +308,6 @@ class _RedeemPageState extends State<RedeemPage> {
                   : null,
             ),
 
-            /// OWNER INFO
             if (_isVerified) ...[
               const SizedBox(height: 16),
               Card(
@@ -281,18 +332,26 @@ class _RedeemPageState extends State<RedeemPage> {
 
             const SizedBox(height: 24),
 
-            /// REDEEM BUTTON (POST NANTI)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isVerified ? Colors.red : Colors.grey,
                 ),
-                onPressed: _isVerified ? () {} : null,
-                child: const Text(
-                  'Redeem',
-                  style: TextStyle(color: Colors.white),
-                ),
+                onPressed: (_isVerified && !_isRedeeming) ? _redeem : null,
+                child: _isRedeeming
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Redeem',
+                        style: TextStyle(color: Colors.white),
+                      ),
               ),
             ),
           ],

@@ -24,4 +24,14 @@ class RedeemController {
   Future<Map<String, dynamic>> deleteRedeem(String id) {
     return _repo.deleteRedeem(id);
   }
+
+  // =====================
+  // REDEEM
+  // =====================
+  Future<Map<String, dynamic>> redeem({
+    required String serialNumber,
+    required int redeemType,
+  }) {
+    return _repo.redeem(serialNumber: serialNumber, redeemType: redeemType);
+  }
 }

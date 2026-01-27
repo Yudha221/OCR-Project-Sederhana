@@ -80,4 +80,44 @@ class RedeemRepository {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  // =====================
+  // REDEEM (POST)
+  // =====================
+  Future<Map<String, dynamic>> redeem({
+    required String serialNumber,
+    required int redeemType,
+  }) async {
+    try {
+      final Response response = await dio.post(
+        '/redeem',
+        data: {
+          'serialNumber': serialNumber,
+          'redeemType': redeemType == 1 ? 'SINGLE' : 'ROUNDTRIP',
+          'product': 'FWC',
+          'notes': '',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'data': response.data['data'],
+          'message': response.data['message'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': response.data?['message'] ?? 'Redeem gagal',
+      };
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? 'Server error',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
