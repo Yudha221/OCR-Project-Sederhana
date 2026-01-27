@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:ocr_project/src/controllers/redeem_controller.dart';
 
 class RedeemPage extends StatefulWidget {
   const RedeemPage({super.key});
@@ -10,11 +11,19 @@ class RedeemPage extends StatefulWidget {
 
 class _RedeemPageState extends State<RedeemPage> {
   final TextEditingController _serialController = TextEditingController();
+  final RedeemController _redeemController = RedeemController();
 
   MobileScannerController? _scannerController;
 
   int _redeemType = 1;
   bool _isScanning = false;
+  bool _isVerified = false;
+  bool _isVerifying = false;
+
+  // DATA DARI API
+  String ownerName = '';
+  String ownerNik = '';
+  int remainingQuota = 0;
 
   @override
   void initState() {
@@ -41,9 +50,17 @@ class _RedeemPageState extends State<RedeemPage> {
     super.dispose();
   }
 
-  /// =====================
-  /// OPEN SCANNER
-  /// =====================
+  // ================= RESET VERIFY
+  void _resetVerification() {
+    setState(() {
+      _isVerified = false;
+      ownerName = '';
+      ownerNik = '';
+      remainingQuota = 0;
+    });
+  }
+
+  // ================= SCANNER
   void _openScanner() {
     if (_isScanning) return;
 
@@ -62,21 +79,18 @@ class _RedeemPageState extends State<RedeemPage> {
                 controller: _scannerController!,
                 onDetect: (capture) {
                   if (capture.barcodes.isEmpty) return;
-
                   final value = capture.barcodes.first.rawValue;
                   if (value == null || value.isEmpty) return;
-
-                  debugPrint('DETECTED BARCODE: $value');
 
                   Navigator.pop(context);
                   setState(() {
                     _serialController.text = value;
                     _isScanning = false;
                   });
+
+                  if (_isVerified) _resetVerification();
                 },
               ),
-
-              /// CLOSE BUTTON
               Positioned(
                 top: 16,
                 right: 16,
@@ -88,8 +102,6 @@ class _RedeemPageState extends State<RedeemPage> {
                   },
                 ),
               ),
-
-              /// FLASH BUTTON
               Positioned(
                 bottom: 24,
                 right: 24,
@@ -108,10 +120,8 @@ class _RedeemPageState extends State<RedeemPage> {
     });
   }
 
-  /// =====================
-  /// VERIFY
-  /// =====================
-  void _verifySerial() {
+  // ================= VERIFY SERIAL (GET API)
+  Future<void> _verifySerial() async {
     final serial = _serialController.text.trim();
 
     if (serial.isEmpty) {
@@ -121,17 +131,38 @@ class _RedeemPageState extends State<RedeemPage> {
       return;
     }
 
-    debugPrint('Serial: $serial');
-    debugPrint('Redeem Type: $_redeemType');
+    try {
+      setState(() => _isVerifying = true);
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Serial siap diverifikasi')));
+      final response = await _redeemController.verifySerial(serial);
+
+      if (response['success'] != true) {
+        throw Exception(response['message'] ?? 'Gagal verifikasi');
+      }
+
+      final data = response['data'];
+
+      setState(() {
+        _isVerified = true;
+        ownerName = data['customerName']?.toString() ?? '-';
+        ownerNik = data['nik']?.toString() ?? '-';
+        remainingQuota =
+            int.tryParse(data['quotaRemaining']?.toString() ?? '0') ?? 0;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Serial berhasil diverifikasi')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Verifikasi gagal: $e')));
+    } finally {
+      setState(() => _isVerifying = false);
+    }
   }
 
-  /// =====================
-  /// UI
-  /// =====================
+  // ================= UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,7 +178,7 @@ class _RedeemPageState extends State<RedeemPage> {
             ),
             const SizedBox(height: 20),
 
-            /// SERIAL NUMBER
+            /// SERIAL
             const Text('Serial Number'),
             const SizedBox(height: 6),
             TextField(
@@ -162,17 +193,45 @@ class _RedeemPageState extends State<RedeemPage> {
                   onPressed: _isScanning ? null : _openScanner,
                 ),
               ),
+              onChanged: (_) {
+                if (_isVerified) _resetVerification();
+              },
             ),
 
             const SizedBox(height: 12),
 
-            /// CAMERA BUTTON
+            /// SCAN BUTTON
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Scan dari Camera'),
                 onPressed: _isScanning ? null : _openScanner,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            /// VERIFY BUTTON
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: _isVerifying ? null : _verifySerial,
+                child: _isVerifying
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Verify Serial Number'),
               ),
             ),
 
@@ -184,40 +243,57 @@ class _RedeemPageState extends State<RedeemPage> {
               value: 1,
               groupValue: _redeemType,
               title: const Text('Single Journey (1 Kuota)'),
-              onChanged: (v) => setState(() => _redeemType = v!),
+              onChanged: _isVerified
+                  ? (v) => setState(() => _redeemType = v!)
+                  : null,
             ),
             RadioListTile<int>(
               value: 2,
               groupValue: _redeemType,
               title: const Text('PP / Round Trip (2 Kuota)'),
-              onChanged: (v) => setState(() => _redeemType = v!),
+              onChanged: _isVerified
+                  ? (v) => setState(() => _redeemType = v!)
+                  : null,
             ),
 
-            const SizedBox(height: 20),
+            /// OWNER INFO
+            if (_isVerified) ...[
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Nama: $ownerName'),
+                      Text('NIK: $ownerNik'),
+                      Text('Serial: ${_serialController.text}'),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Sisa Kuota: $remainingQuota',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
-            /// ACTION BUTTONS
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
+            const SizedBox(height: 24),
+
+            /// REDEEM BUTTON (POST NANTI)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isVerified ? Colors.red : Colors.grey,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    onPressed: _verifySerial,
-                    child: const Text(
-                      'Verify Serial Number',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
+                onPressed: _isVerified ? () {} : null,
+                child: const Text(
+                  'Redeem',
+                  style: TextStyle(color: Colors.white),
                 ),
-              ],
+              ),
             ),
           ],
         ),
