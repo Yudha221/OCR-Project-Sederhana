@@ -5,10 +5,23 @@ class RedeemController {
   final RedeemRepository _repo = RedeemRepository();
 
   // =====================
-  // GET LIST
+  // GET ALL DATA 🔥
   // =====================
-  Future<List<Redeem>> fetchRedeem() {
-    return _repo.getRedeemList();
+  Future<List<Redeem>> fetchAllRedeem() async {
+    int page = 1;
+    const int limit = 50; // ambil banyak biar cepat
+    List<Redeem> allData = [];
+
+    while (true) {
+      final data = await _repo.getRedeemList(page: page, limit: limit);
+
+      if (data.isEmpty) break;
+
+      allData.addAll(data);
+      page++;
+    }
+
+    return allData;
   }
 
   // =====================

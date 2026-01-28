@@ -25,6 +25,8 @@ class _RedeemPageState extends State<RedeemPage> {
   String ownerName = '';
   String ownerNik = '';
   int remainingQuota = 0;
+  String cardCategory = '';
+  String cardType = '';
 
   // ✅ TAMBAHAN
   int get _requiredQuota {
@@ -63,6 +65,8 @@ class _RedeemPageState extends State<RedeemPage> {
       ownerName = '';
       ownerNik = '';
       remainingQuota = 0;
+      cardCategory = '';
+      cardType = '';
     });
   }
 
@@ -152,6 +156,8 @@ class _RedeemPageState extends State<RedeemPage> {
         _isVerified = true;
         ownerName = data['customerName']?.toString() ?? '-';
         ownerNik = data['nik']?.toString() ?? '-';
+        cardCategory = data['cardCategory']?.toString() ?? '-';
+        cardType = data['cardType']?.toString() ?? '-';
         remainingQuota =
             int.tryParse(data['quotaRemaining']?.toString() ?? '0') ?? 0;
       });
@@ -201,14 +207,7 @@ class _RedeemPageState extends State<RedeemPage> {
         remainingQuota = int.tryParse(data['quotaRemaining'].toString()) ?? 0;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Redeem berhasil')));
-
-      if (remainingQuota <= 0) {
-        _resetVerification();
-        _serialController.clear();
-      }
+      _showRedeemSuccessDialog();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -216,6 +215,32 @@ class _RedeemPageState extends State<RedeemPage> {
     } finally {
       setState(() => _isRedeeming = false);
     }
+  }
+
+  void _showRedeemSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // wajib klik OK
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Berhasil'),
+          content: const Text('Redeem berhasil'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // tutup dialog
+                Navigator.pop(context); // balik ke HomePage
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green, // warna tombol
+                foregroundColor: Colors.white, // warna teks
+              ),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // ================= UI
@@ -309,22 +334,50 @@ class _RedeemPageState extends State<RedeemPage> {
             ),
 
             if (_isVerified) ...[
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Nama: $ownerName'),
-                      Text('NIK: $ownerNik'),
-                      Text('Serial: ${_serialController.text}'),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Sisa Kuota: $remainingQuota',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity, // 👈 FULL LEBAR
+                child: Card(
+                  elevation: 4, // 👈 agak naik
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16), // 👈 lebih smooth
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20), // 👈 CARD JADI BESAR
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Informasi Kartu',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Divider(height: 24),
+
+                        Text('Nama: $ownerName'),
+                        const SizedBox(height: 6),
+                        Text('NIK: $ownerNik'),
+                        const SizedBox(height: 6),
+                        Text('Serial: ${_serialController.text}'),
+                        const SizedBox(height: 6),
+                        Text('Card Category: $cardCategory'),
+                        const SizedBox(height: 6),
+                        Text('Card Type: $cardType'),
+
+                        const SizedBox(height: 12),
+
+                        Text(
+                          'Sisa Kuota: $remainingQuota',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

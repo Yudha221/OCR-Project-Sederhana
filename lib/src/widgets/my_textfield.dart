@@ -4,14 +4,14 @@ class MyTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final bool obscureText;
-  final Widget? suffixIcon; // 👈 TAMBAHAN
+  final Widget? suffixIcon;
 
   const MyTextField({
     super.key,
     required this.controller,
     required this.hintText,
     required this.obscureText,
-    this.suffixIcon, // 👈 TAMBAHAN
+    this.suffixIcon,
   });
 
   @override
@@ -22,17 +22,29 @@ class MyTextField extends StatelessWidget {
         controller: controller,
         obscureText: obscureText,
         decoration: InputDecoration(
-          enabledBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.white),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey),
-          ),
-          fillColor: Colors.grey.shade200,
           filled: true,
+          fillColor: Colors.grey.shade200,
+
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[500]),
-          suffixIcon: suffixIcon, // 👈 DIPAKAI DI SINI
+
+          // BORDER NORMAL
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10), // 👈 UJUNG MELENGKUNG
+            borderSide: BorderSide.none, // 👈 tanpa garis
+          ),
+
+          // BORDER SAAT FOCUS
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10), // 👈 HARUS SAMA
+            borderSide: BorderSide.none,
+          ),
+
+          suffixIcon: suffixIcon,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14, // 👈 tinggi TextField
+          ),
         ),
       ),
     );

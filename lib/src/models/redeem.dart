@@ -40,8 +40,8 @@ class Redeem {
     final station = json['station'] ?? {};
     final operator = json['operator'] ?? {};
 
-    final int quotaTicket =
-        int.tryParse(card['quotaTicket']?.toString() ?? '0') ?? 0;
+    final int remainingQuota =
+        int.tryParse(json['remainingQuota']?.toString() ?? '0') ?? 0;
     final int quotaUsed =
         int.tryParse(json['quotaUsed']?.toString() ?? '0') ?? 0;
 
@@ -56,10 +56,10 @@ class Redeem {
       cardType: type['typeName'] ?? '-',
       journeyType: json['redeemType'] ?? '-',
       usedQuota: quotaUsed,
-      remainingQuota: quotaTicket - quotaUsed,
+      remainingQuota: remainingQuota,
       operatorName: operator['fullName'] ?? '-',
       station: station['stationName'] ?? '-',
-      lastRedeem: (quotaTicket - quotaUsed) <= 0,
+      lastRedeem: remainingQuota <= 0,
     );
   }
 }

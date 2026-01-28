@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/redeem_controller.dart';
+import 'package:ocr_project/src/models/last_redeem.dart';
 import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/auth/login_page.dart';
+import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -54,9 +56,9 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadRedeem() async {
     setState(() => isLoading = true);
 
-    final data = await _redeemController.fetchRedeem();
-    allData = data;
+    final data = await _redeemController.fetchAllRedeem();
 
+    allData = data;
     currentPage = 1;
     _applyFilterAndPagination();
 
@@ -66,22 +68,18 @@ class _HomePageState extends State<HomePage> {
   // ================= FILTER + PAGINATION =================
   void _applyFilterAndPagination() {
     filteredData = allData.where((e) {
-      // SEARCH
       final matchSearch =
           searchQuery.isEmpty ||
           e.customerName.toLowerCase().contains(searchQuery) ||
           e.identityNumber.contains(searchQuery) ||
           e.serialNumber.contains(searchQuery);
 
-      // CATEGORY
       final matchCategory =
           selectedCategory == null || e.cardCategory == selectedCategory;
 
-      // CARD TYPE
       final matchType =
           selectedCardType == null || e.cardType == selectedCardType;
 
-      // DATE RANGE
       bool matchDate = true;
       final redeemDate = DateTime.tryParse(e.redeemDate);
 
@@ -126,19 +124,25 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _titleSection(),
-            const SizedBox(height: 16),
-            _searchSection(),
-            const SizedBox(height: 16),
-            _filterSection(),
-            const SizedBox(height: 20),
-            _tableSection(),
-          ],
+
+      // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
+      body: RefreshIndicator(
+        onRefresh: _loadRedeem,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _titleSection(),
+              const SizedBox(height: 16),
+              _searchSection(),
+              const SizedBox(height: 16),
+              _filterSection(),
+              const SizedBox(height: 20),
+              _tableSection(),
+            ],
+          ),
         ),
       ),
     );
@@ -195,6 +199,14 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (_) => const RedeemPage()),
             );
           },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8), // 👈 BORDER RADIUS
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
           child: const Text('Redeem'),
         ),
       ],
@@ -323,7 +335,7 @@ class _HomePageState extends State<HomePage> {
               DataColumn(label: Text('Sisa')),
               DataColumn(label: Text('Operator')),
               DataColumn(label: Text('Stasiun')),
-              DataColumn(label: Text('Last')),
+              DataColumn(label: Text('Last Redeem')),
               DataColumn(label: Text('Aksi')),
             ],
             rows: tableData.map((e) {
@@ -342,14 +354,52 @@ class _HomePageState extends State<HomePage> {
                   DataCell(Text(e.operatorName)),
                   DataCell(Text(e.station)),
                   DataCell(
-                    Chip(
-                      label: Text(
-                        e.lastRedeem ? 'Last' : '-',
-                        style: const TextStyle(color: Colors.white),
+                    ElevatedButton(
+                      onPressed: e.lastRedeem
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LastRedeemPage(
+                                    data: LastRedeem(
+                                      name: e.customerName,
+                                      nik: e.identityNumber,
+                                      serialNumber: e.serialNumber,
+                                      programType: e.journeyType,
+                                      cardCategory: e.cardCategory,
+                                      cardType: e.cardType,
+                                      redeemDate: e.redeemDate,
+                                      redeemType: e.journeyType,
+                                      quotaUsed: e.usedQuota,
+                                      remainingQuota: e.remainingQuota,
+                                      station: e.station,
+                                      operatorName: e.operatorName,
+                                      status: e.lastRedeem ? 'Success' : '-',
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: e.lastRedeem
+                            ? Colors.green
+                            : Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // 👈 BORDER RADIUS
+                        ),
                       ),
-                      backgroundColor: e.lastRedeem
-                          ? Colors.green
-                          : Colors.grey,
+                      child: const Text(
+                        'Last Redeem',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ),
                   ),
                   DataCell(
@@ -365,13 +415,16 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(color: Colors.red),
                       ),
                       style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: Colors.red, // 👈 warna border
+                          width: 1.5, // 👈 tebal border
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8), // 👈 radius
+                        ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
-                        ),
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
                         ),
                       ),
                     ),
@@ -549,4 +602,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-} // ← SATU-SATUNYA PENUTUP CLASS
+}

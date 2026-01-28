@@ -8,8 +8,12 @@ class RedeemRepository {
   // =====================
   // GET LIST (HOME TABLE)
   // =====================
-  Future<List<Redeem>> getRedeemList() async {
-    final response = await dio.get('/redeem');
+  Future<List<Redeem>> getRedeemList({int page = 1, int limit = 10}) async {
+    final response = await dio.get(
+      '/redeem',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+
     final List items = response.data['data']['items'];
     return items.map((e) => Redeem.fromJson(e)).toList();
   }
