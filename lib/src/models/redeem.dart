@@ -10,6 +10,7 @@ class Redeem {
   final String journeyType;
   final int usedQuota;
   final int remainingQuota;
+  final String note;
   final String operatorName;
   final String station;
   final bool lastRedeem;
@@ -26,6 +27,7 @@ class Redeem {
     required this.journeyType,
     required this.usedQuota,
     required this.remainingQuota,
+    required this.note,
     required this.operatorName,
     required this.station,
     required this.lastRedeem,
@@ -55,6 +57,7 @@ class Redeem {
       cardCategory: category['categoryName'] ?? '-',
       cardType: type['typeName'] ?? '-',
       journeyType: json['redeemType'] ?? '-',
+      note: json['notes']?.toString() ?? '-',
       usedQuota: quotaUsed,
       remainingQuota: remainingQuota,
       operatorName: operator['fullName'] ?? '-',

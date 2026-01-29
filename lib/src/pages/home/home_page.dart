@@ -331,7 +331,6 @@ class _HomePageState extends State<HomePage> {
               DataColumn(label: Text('Kategori')),
               DataColumn(label: Text('Tipe')),
               DataColumn(label: Text('Perjalanan')),
-              DataColumn(label: Text('Terpakai')),
               DataColumn(label: Text('Sisa')),
               DataColumn(label: Text('Operator')),
               DataColumn(label: Text('Stasiun')),
@@ -349,8 +348,33 @@ class _HomePageState extends State<HomePage> {
                   DataCell(Text(e.cardCategory)),
                   DataCell(Text(e.cardType)),
                   DataCell(Text(e.journeyType)),
-                  DataCell(Text(e.usedQuota.toString())),
-                  DataCell(Text(e.remainingQuota.toString())),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: e.remainingQuota <= 0
+                            ? Colors.red.withOpacity(0.15)
+                            : e.remainingQuota <= 2
+                            ? Colors.orange.withOpacity(0.15)
+                            : Colors.green.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        e.remainingQuota.toString(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: e.remainingQuota <= 0
+                              ? Colors.red
+                              : e.remainingQuota <= 2
+                              ? Colors.orange
+                              : Colors.green,
+                        ),
+                      ),
+                    ),
+                  ),
                   DataCell(Text(e.operatorName)),
                   DataCell(Text(e.station)),
                   DataCell(
