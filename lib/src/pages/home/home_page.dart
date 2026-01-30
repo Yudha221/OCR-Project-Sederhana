@@ -317,21 +317,59 @@ class _HomePageState extends State<HomePage> {
     final totalPage = (filteredData.length / rowsPerPage).ceil().clamp(1, 999);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7F8FA), // abu modern
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              /// 🔥 JUDUL
+              const Text(
+                "Riwayat Redeem",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+
+              /// 🔥 TOTAL DATA (punya kamu — cuma dipindah)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Total Data : ${filteredData.length}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
             columns: const [
-              DataColumn(label: Text('Tanggal')),
-              DataColumn(label: Text('Nama')),
+              DataColumn(label: Text('Tanggal Redeem')),
+              DataColumn(label: Text('Nama Pelanggan')),
               DataColumn(label: Text('NIK')),
-              DataColumn(label: Text('Transaksi')),
-              DataColumn(label: Text('Serial')),
-              DataColumn(label: Text('Kategori')),
-              DataColumn(label: Text('Tipe')),
-              DataColumn(label: Text('Perjalanan')),
-              DataColumn(label: Text('Sisa')),
+              DataColumn(label: Text('Nomor Transaksi')),
+              DataColumn(label: Text('Serial Kartu')),
+              DataColumn(label: Text('Kategori Kartu')),
+              DataColumn(label: Text('Tipe Kartu')),
+              DataColumn(label: Text('Tipe Perjalanan')),
+              DataColumn(label: Text('Sisa Kuota')),
               DataColumn(label: Text('Operator')),
               DataColumn(label: Text('Stasiun')),
               DataColumn(label: Text('Last Redeem')),
@@ -345,9 +383,51 @@ class _HomePageState extends State<HomePage> {
                   DataCell(Text(e.identityNumber)),
                   DataCell(Text(e.transactionNumber)),
                   DataCell(Text(e.serialNumber)),
-                  DataCell(Text(e.cardCategory)),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD6E4FF), // bg soft blue
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        e.cardCategory,
+                        style: const TextStyle(
+                          color: Color(0xFF1565C0), // text blue
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
                   DataCell(Text(e.cardType)),
-                  DataCell(Text(e.journeyType)),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: e.journeyType.toLowerCase().contains('round')
+                            ? const Color(0xFFDCD0F3)
+                            : const Color(0xFFE6D5B8),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        e.journeyType,
+                        style: TextStyle(
+                          color: e.journeyType.toLowerCase().contains('round')
+                              ? const Color(0xFF5E35B1)
+                              : const Color(0xFF8B4513),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(
