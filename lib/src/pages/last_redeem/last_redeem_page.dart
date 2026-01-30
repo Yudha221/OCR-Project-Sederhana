@@ -2,8 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ocr_project/src/models/last_redeem.dart';
-import 'package:dio/dio.dart';
-import 'package:ocr_project/src/presentation/api.dart';
+import 'package:ocr_project/src/controllers/last_redeem_controller.dart';
 
 class LastRedeemPage extends StatefulWidget {
   final LastRedeem data;
@@ -15,12 +14,11 @@ class LastRedeemPage extends StatefulWidget {
 }
 
 class _LastRedeemPageState extends State<LastRedeemPage> {
-  // ===== DATA DARI TABLE =====
   late final LastRedeem lastRedeem;
 
-  // ===== TAMBAHAN UPLOAD FOTO =====
+  final LastRedeemController controller = LastRedeemController();
+
   final ImagePicker _picker = ImagePicker();
-  final Dio _dio = Api().dio;
 
   File? selectedImage;
   bool isUploading = false;
@@ -31,26 +29,72 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
     lastRedeem = widget.data;
   }
 
-  // ================= PICK IMAGE =================
-  Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+  // ================= PICK IMAGE (KAMERA + GALERI) =================
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 70, // 🔥 compress biar upload cepat
+    );
+
     if (picked != null) {
-      setState(() => selectedImage = File(picked.path));
+      setState(() {
+        selectedImage = File(picked.path);
+      });
     }
+  }
+
+  // ================= PILIH SUMBER FOTO =================
+  void _showImageSource() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Kamera"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text("Galeri"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // ================= UPLOAD IMAGE =================
   Future<void> _uploadImage() async {
-    if (selectedImage == null) return;
+    if (selectedImage == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Pilih foto dulu")));
+      return;
+    }
 
     setState(() => isUploading = true);
 
     try {
-      final formData = FormData.fromMap({
-        'photo': await MultipartFile.fromFile(selectedImage!.path),
-      });
+      await controller.uploadPhoto(lastRedeem.id, selectedImage!);
 
-      await _dio.post('/user/upload-photo', data: formData);
+      /// 🔥 FETCH DATA BARU
+      final updated = await controller.fetchLastRedeem();
+
+      setState(() {
+        lastRedeem = updated!; // reload data terbaru
+        selectedImage = null; // biar pakai foto dari server
+      });
 
       ScaffoldMessenger.of(
         context,
@@ -102,17 +146,31 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
             ),
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: selectedImage != null
-                    ? FileImage(selectedImage!)
-                    : null,
-                child: selectedImage == null
-                    ? const Icon(Icons.camera_alt, size: 36)
-                    : null,
+              onTap: _showImageSource,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12), // 🔥 sudut kotak
+                child: Container(
+                  width: double.infinity,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: selectedImage != null
+                      ? Image.file(selectedImage!, fit: BoxFit.cover)
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.camera_alt, size: 40),
+                            SizedBox(height: 8),
+                            Text("Tap untuk upload foto"),
+                          ],
+                        ),
+                ),
               ),
             ),
+
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,

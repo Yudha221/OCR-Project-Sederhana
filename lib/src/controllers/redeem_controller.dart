@@ -21,7 +21,9 @@ class RedeemController {
       page++;
     }
 
-    return allData;
+    return allData
+        .where((e) => e.programType == 'FWC') // ✅ FILTER HERE
+        .toList();
   }
 
   // =====================
@@ -34,8 +36,12 @@ class RedeemController {
   // =====================
   // DELETE REDEEM ✅
   // =====================
-  Future<Map<String, dynamic>> deleteRedeem(String id) {
-    return _repo.deleteRedeem(id);
+  Future<Map<String, dynamic>> deleteRedeem({
+    required String id,
+    required String note,
+    required String deletedBy,
+  }) {
+    return _repo.deleteRedeem(id: id, note: note, deletedBy: deletedBy);
   }
 
   // =====================

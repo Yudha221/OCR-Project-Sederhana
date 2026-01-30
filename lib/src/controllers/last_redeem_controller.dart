@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:ocr_project/src/models/last_redeem.dart';
 import 'package:ocr_project/src/repositories/last_redeem_repository.dart';
 
@@ -11,7 +12,11 @@ class LastRedeemController {
 
     if (items.isEmpty) return null;
 
-    // 🔥 AMBIL TRANSAKSI TERAKHIR
     return LastRedeem.fromJson(items.first);
+  }
+
+  /// ✅ upload foto
+  Future<void> uploadPhoto(String id, File file) async {
+    await _repository.uploadLastDoc(id, file);
   }
 }

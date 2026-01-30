@@ -8,6 +8,7 @@ class Redeem {
   final String cardCategory;
   final String cardType;
   final String journeyType;
+  final String programType; // ✅ NEW FIELD
   final int usedQuota;
   final int remainingQuota;
   final String note;
@@ -25,6 +26,7 @@ class Redeem {
     required this.cardCategory,
     required this.cardType,
     required this.journeyType,
+    required this.programType,
     required this.usedQuota,
     required this.remainingQuota,
     required this.note,
@@ -34,6 +36,11 @@ class Redeem {
   });
 
   factory Redeem.fromJson(Map<String, dynamic> json) {
+    // 🔥 DEBUG: Cek apakah notes masuk
+    if (json['notes'] != null) {
+       print('DEBUG JSON NOTES (ID: ${json['id']}): ${json['notes']}');
+    }
+
     final card = json['card'] ?? {};
     final member = card['member'] ?? {};
     final product = card['cardProduct'] ?? {};
@@ -57,6 +64,7 @@ class Redeem {
       cardCategory: category['categoryName'] ?? '-',
       cardType: type['typeName'] ?? '-',
       journeyType: json['redeemType'] ?? '-',
+      programType: card['programType'] ?? '-', // ✅ Map from JSON
       note: json['notes']?.toString() ?? '-',
       usedQuota: quotaUsed,
       remainingQuota: remainingQuota,

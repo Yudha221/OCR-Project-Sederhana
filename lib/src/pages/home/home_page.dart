@@ -158,9 +158,14 @@ class _HomePageState extends State<HomePage> {
       ),
       actions: [
         PopupMenuButton<String>(
+          offset: const Offset(0, 30),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12), // biar modern
+          ),
           onSelected: (v) {
             if (v == 'logout') _showLogoutDialog();
           },
+
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'logout', child: Text('Logout')),
           ],
@@ -330,13 +335,13 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              /// 🔥 JUDUL
+              ///  JUDUL
               const Text(
                 "Riwayat Redeem",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
 
-              /// 🔥 TOTAL DATA (punya kamu — cuma dipindah)
+              ///  TOTAL DATA (punya kamu — cuma dipindah)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
@@ -466,6 +471,7 @@ class _HomePageState extends State<HomePage> {
                                 MaterialPageRoute(
                                   builder: (_) => LastRedeemPage(
                                     data: LastRedeem(
+                                      id: e.id,
                                       name: e.customerName,
                                       nik: e.identityNumber,
                                       serialNumber: e.serialNumber,
@@ -619,25 +625,68 @@ class _HomePageState extends State<HomePage> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false, //  biar gak ketutup kalau tap luar
       builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Yakin logout?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+        // TITLE dengan icon
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 10),
+            Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+
+        content: const Text(
+          'Yakin ingin logout dari aplikasi?',
+          style: TextStyle(fontSize: 12),
+        ),
+
+        actionsPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
+
         actions: [
-          TextButton(
+          /// Batal
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
+
+          ///LOGOUT button
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 3,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             onPressed: () async {
               Navigator.pop(context);
+
               await _authController.logout();
+
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => LoginPage()),
                 (_) => false,
               );
             },
-            child: const Text('Logout'),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -645,11 +694,40 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _confirmDelete(String id) {
+    final TextEditingController noteController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Hapus Data'),
-        content: const Text('Yakin ingin menghapus data ini?'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Yakin ingin menghapus data ini? Aksi ini memerlukan alasan penghapusan.',
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Alasan Hapus',
+                  hintText: 'Contoh: Salah input data',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Alasan wajib diisi';
+                  }
+                  return null;
+                },
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -658,45 +736,52 @@ class _HomePageState extends State<HomePage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              Navigator.pop(context);
-              setState(() => isLoading = true);
+              if (formKey.currentState!.validate()) {
+                final note = noteController.text.trim();
+                Navigator.pop(context);
+                setState(() => isLoading = true);
 
-              try {
-                final result = await _redeemController.deleteRedeem(id);
-
-                if (result['success'] == true) {
-                  await _loadRedeem();
-
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        result['message'] ?? 'Data berhasil dihapus',
-                      ),
-                    ),
+                try {
+                  final result = await _redeemController.deleteRedeem(
+                    id: id,
+                    note: note,
+                    deletedBy: userName,
                   );
-                } else {
+
+                  if (result['success'] == true) {
+                    await _loadRedeem();
+
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          result['message'] ?? 'Data berhasil dihapus',
+                        ),
+                      ),
+                    );
+                  } else {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          result['message'] ?? 'Gagal menghapus data',
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        result['message'] ?? 'Gagal menghapus data',
-                      ),
+                    const SnackBar(
+                      content: Text('Terjadi kesalahan'),
                       backgroundColor: Colors.red,
                     ),
                   );
-                }
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Terjadi kesalahan'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } finally {
-                if (mounted) {
-                  setState(() => isLoading = false);
+                } finally {
+                  if (mounted) {
+                    setState(() => isLoading = false);
+                  }
                 }
               }
             },

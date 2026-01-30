@@ -1,4 +1,5 @@
 class LastRedeem {
+  final String id;
   final String name;
   final String nik;
 
@@ -16,6 +17,7 @@ class LastRedeem {
   final String status;
 
   LastRedeem({
+    required this.id,
     required this.name,
     required this.nik,
     required this.serialNumber,
@@ -33,9 +35,9 @@ class LastRedeem {
 
   factory LastRedeem.fromJson(Map<String, dynamic> json) {
     return LastRedeem(
+      id: json['id'].toString(),
       name: json['card']['member']['name'],
       nik: json['card']['member']['identityNumber'],
-
       serialNumber: json['card']['serialNumber'],
       programType: json['card']['programType'],
       cardCategory: json['card']['cardProduct']['category']['categoryName'],

@@ -58,9 +58,17 @@ class RedeemRepository {
   // =====================
   // DELETE REDEEM ✅ (UUID STRING)
   // =====================
-  Future<Map<String, dynamic>> deleteRedeem(String id) async {
+  Future<Map<String, dynamic>> deleteRedeem({
+    required String id,
+    required String note,
+    required String deletedBy,
+  }) async {
     try {
-      final Response response = await dio.delete('/redeem/$id');
+      final Response response = await dio.delete(
+        '/redeem/$id',
+        queryParameters: {'notes': note, 'deletedBy': deletedBy},
+        data: {'notes': note, 'deletedBy': deletedBy}, // DOUBLE SEND (Body + Query)
+      );
 
       if (response.statusCode == 200) {
         return {
