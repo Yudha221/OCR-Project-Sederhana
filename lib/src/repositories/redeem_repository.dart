@@ -67,7 +67,10 @@ class RedeemRepository {
       final Response response = await dio.delete(
         '/redeem/$id',
         queryParameters: {'notes': note, 'deletedBy': deletedBy},
-        data: {'notes': note, 'deletedBy': deletedBy}, // DOUBLE SEND (Body + Query)
+        data: {
+          'notes': note,
+          'deletedBy': deletedBy,
+        }, // DOUBLE SEND (Body + Query)
       );
 
       if (response.statusCode == 200) {

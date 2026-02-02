@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:ocr_project/src/controllers/auth_controller.dart';
-import 'package:ocr_project/src/controllers/redeem_controller.dart';
-import 'package:ocr_project/src/models/last_redeem.dart';
+import 'package:ocr_project/src/controllers/voucher_controller.dart';
 import 'package:ocr_project/src/models/redeem.dart';
-import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
-import 'package:ocr_project/src/pages/redeem/redeem_page.dart';
+import 'package:ocr_project/src/pages/redeem/redeem_voucher_page.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePageVoucher extends StatefulWidget {
+  const HomePageVoucher({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePageVoucher> createState() => _HomePageVoucherState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageVoucherState extends State<HomePageVoucher> {
   final AuthController _authController = AuthController();
-  final RedeemController _redeemController = RedeemController();
+  final VoucherRedeemController _redeemController =
+      VoucherRedeemController(); // 🔥 GANTI CONTROLLER
 
   // user
   String userName = '';
@@ -45,7 +44,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadUserName();
-    _loadRedeem();
+    _loadVoucher();
   }
 
   Future<void> _loadUserName() async {
@@ -53,10 +52,10 @@ class _HomePageState extends State<HomePage> {
     setState(() => userName = name);
   }
 
-  Future<void> _loadRedeem() async {
+  Future<void> _loadVoucher() async {
     setState(() => isLoading = true);
 
-    final data = await _redeemController.fetchAllRedeem();
+    final data = await _redeemController.fetchAllVoucher(); // 🔥 VOUCHER
 
     allData = data;
     currentPage = 1;
@@ -124,13 +123,10 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: _buildAppBar(),
-      drawer: MyDrawer(
-        userName: userName, // 👈 KIRIM USERNAME KE DRAWER
-      ),
+      drawer: MyDrawer(userName: userName),
 
-      // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
       body: RefreshIndicator(
-        onRefresh: _loadRedeem,
+        onRefresh: _loadVoucher, // 🔥
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -155,10 +151,7 @@ class _HomePageState extends State<HomePage> {
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: const Color(0xFF7A1E2D),
-      title: const Text(
-        'Frequent Whoosher Card',
-        style: TextStyle(color: Colors.white),
-      ),
+      title: const Text('Voucher', style: TextStyle(color: Colors.white)),
     );
   }
 
@@ -168,24 +161,24 @@ class _HomePageState extends State<HomePage> {
       children: [
         const Expanded(
           child: Text(
-            'Redeem Kuota Management',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            'Redeem Voucher Management',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         ElevatedButton(
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const RedeemPage()),
+              MaterialPageRoute(builder: (_) => const RedeemVoucherPage()),
             );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8), // 👈 BORDER RADIUS
+              borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
           child: const Text('Redeem'),
         ),
@@ -195,40 +188,18 @@ class _HomePageState extends State<HomePage> {
 
   // ================= SEARCH =================
   Widget _searchSection() {
-    return SizedBox(
-      height: 42, // 👈 PERKECIL TINGGI
-      child: TextField(
-        controller: _searchController,
-        style: const TextStyle(fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Cari nama / NIK / serial',
-          prefixIcon: const Icon(Icons.search, size: 20),
-          isDense: true, // 👈 PENTING BIAR PADAT
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 10,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24), // 👈 ROUNDED
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: const BorderSide(color: Colors.red, width: 1.5),
-          ),
-        ),
-        onChanged: (v) {
-          searchQuery = v.toLowerCase();
-          currentPage = 1;
-          setState(_applyFilterAndPagination);
-        },
+    return TextField(
+      controller: _searchController,
+      decoration: const InputDecoration(
+        prefixIcon: Icon(Icons.search),
+        hintText: 'Cari nama / NIK / serial',
+        border: OutlineInputBorder(),
       ),
+      onChanged: (v) {
+        searchQuery = v.toLowerCase();
+        currentPage = 1;
+        setState(_applyFilterAndPagination);
+      },
     );
   }
 
@@ -252,9 +223,9 @@ class _HomePageState extends State<HomePage> {
               ),
               children: [
                 _dropdown(
-                  label: 'Card Category',
+                  label: 'Category',
                   value: selectedCategory,
-                  items: const ['Gold', 'Silver', 'KAI'],
+                  items: const ['Paid', 'Unpaid'],
                   onChanged: (v) {
                     selectedCategory = v;
                     currentPage = 1;
@@ -262,29 +233,11 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
                 _dropdown(
-                  label: 'Card Type',
+                  label: 'Type',
                   value: selectedCardType,
-                  items: const ['JaBan', 'JaKa', 'Kaban'],
+                  items: const ['Ekonomi Premium'],
                   onChanged: (v) {
                     selectedCardType = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _datePicker(
-                  label: 'Start Date',
-                  date: startDate,
-                  onPicked: (d) {
-                    startDate = d;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _datePicker(
-                  label: 'End Date',
-                  date: endDate,
-                  onPicked: (d) {
-                    endDate = d;
                     currentPage = 1;
                     setState(_applyFilterAndPagination);
                   },
@@ -306,7 +259,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ================= TABLE =================
   Widget _tableSection() {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -321,31 +273,29 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ================= TOTAL DATA =================
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F8FA), // abu modern
+            color: const Color(0xFFF7F8FA),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ///  JUDUL
               const Text(
-                "Riwayat Redeem",
+                'Riwayat Redeem Voucher',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
-
-              ///  TOTAL DATA (punya kamu — cuma dipindah)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.10),
+                  color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -359,22 +309,25 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+
+        // ================= TABLE =================
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
+            headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+            columnSpacing: 24,
             columns: const [
               DataColumn(label: Text('Tanggal Redeem')),
               DataColumn(label: Text('Nama Pelanggan')),
               DataColumn(label: Text('NIK')),
               DataColumn(label: Text('Nomor Transaksi')),
-              DataColumn(label: Text('Serial Kartu')),
-              DataColumn(label: Text('Kategori Kartu')),
-              DataColumn(label: Text('Tipe Kartu')),
+              DataColumn(label: Text('Serial Voucher')),
+              DataColumn(label: Text('Kategori Voucher')),
+              DataColumn(label: Text('Tipe Voucher')),
               DataColumn(label: Text('Tipe Perjalanan')),
               DataColumn(label: Text('Sisa Kuota')),
               DataColumn(label: Text('Operator')),
               DataColumn(label: Text('Stasiun')),
-              DataColumn(label: Text('Last Redeem')),
               DataColumn(label: Text('Aksi')),
             ],
             rows: tableData.map((e) {
@@ -385,45 +338,44 @@ class _HomePageState extends State<HomePage> {
                   DataCell(Text(e.identityNumber)),
                   DataCell(Text(e.transactionNumber)),
                   DataCell(Text(e.serialNumber)),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD6E4FF), // bg soft blue
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        e.cardCategory,
-                        style: const TextStyle(
-                          color: Color(0xFF1565C0), // text blue
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  DataCell(Text(e.cardType)),
+
+                  // ===== KATEGORI BADGE =====
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 4,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: e.journeyType.toLowerCase().contains('round')
-                            ? const Color(0xFFDCD0F3)
-                            : const Color(0xFFE6D5B8),
-                        borderRadius: BorderRadius.circular(4),
+                        color: Colors.blue.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        e.journeyType,
-                        style: TextStyle(
-                          color: e.journeyType.toLowerCase().contains('round')
-                              ? const Color(0xFF5E35B1)
-                              : const Color(0xFF8B4513),
+                        e.cardCategory,
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ===== TIPE BADGE =====
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        e.cardType,
+                        style: const TextStyle(
+                          color: Colors.green,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -433,82 +385,62 @@ class _HomePageState extends State<HomePage> {
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 12,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: e.remainingQuota <= 0
-                            ? Colors.red.withOpacity(0.15)
-                            : e.remainingQuota <= 2
-                            ? Colors.orange.withOpacity(0.15)
-                            : Colors.green.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        color: e.journeyType == 'ROUNDTRIP'
+                            ? const Color(0xFFDCD0F3)
+                            : const Color(0xFFE6D5B8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        e.remainingQuota.toString(),
+                        formatJourney(e.journeyType), // 👈 INI KUNCINYA
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: e.remainingQuota <= 0
-                              ? Colors.red
-                              : e.remainingQuota <= 2
-                              ? Colors.orange
-                              : Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: e.journeyType == 'ROUNDTRIP'
+                              ? const Color(0xFF5E35B1)
+                              : const Color(0xFF8B4513),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Center(
+                      child: SizedBox(
+                        height: 32, // 👈 PAKSA TINGGI BADGE
+                        width: 36, // 👈 BIKIN RAPI & SERAGAM
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: e.remainingQuota <= 0
+                                ? Colors.red.withOpacity(0.15)
+                                : e.remainingQuota <= 2
+                                ? Colors.orange.withOpacity(0.15)
+                                : Colors.green.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            e.remainingQuota.toString(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: e.remainingQuota <= 0
+                                  ? Colors.red
+                                  : e.remainingQuota <= 2
+                                  ? Colors.orange
+                                  : Colors.green,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                   DataCell(Text(e.operatorName)),
                   DataCell(Text(e.station)),
-                  DataCell(
-                    ElevatedButton(
-                      onPressed: e.lastRedeem
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => LastRedeemPage(
-                                    data: LastRedeem(
-                                      id: e.id,
-                                      name: e.customerName,
-                                      nik: e.identityNumber,
-                                      serialNumber: e.serialNumber,
-                                      programType: e.journeyType,
-                                      cardCategory: e.cardCategory,
-                                      cardType: e.cardType,
-                                      redeemDate: e.redeemDate,
-                                      redeemType: e.journeyType,
-                                      quotaUsed: e.usedQuota,
-                                      remainingQuota: e.remainingQuota,
-                                      station: e.station,
-                                      operatorName: e.operatorName,
-                                      status: e.lastRedeem ? 'Success' : '-',
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: e.lastRedeem
-                            ? Colors.green
-                            : Colors.black,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            8,
-                          ), // 👈 BORDER RADIUS
-                        ),
-                      ),
-                      child: const Text(
-                        'Last Redeem',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
+
+                  // ===== AKSI =====
                   DataCell(
                     OutlinedButton.icon(
                       onPressed: () => _confirmDelete(e.id),
@@ -522,16 +454,13 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(color: Colors.red),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: Colors.red, // 👈 warna border
-                          width: 1.5, // 👈 tebal border
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // 👈 radius
-                        ),
+                        side: const BorderSide(color: Colors.red),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
@@ -541,7 +470,10 @@ class _HomePageState extends State<HomePage> {
             }).toList(),
           ),
         ),
+
         const SizedBox(height: 8),
+
+        // ================= PAGINATION =================
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -570,7 +502,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ================= COMPONENT =================
+  // ================= UTIL =================
   Widget _dropdown({
     required String label,
     required List<String> items,
@@ -579,79 +511,24 @@ class _HomePageState extends State<HomePage> {
   }) {
     return DropdownButtonFormField<String>(
       value: value,
-      isExpanded: true,
       items: items
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
       onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _datePicker({
-    required String label,
-    required DateTime? date,
-    required Function(DateTime) onPicked,
-  }) {
-    return TextField(
-      readOnly: true,
-      controller: TextEditingController(
-        text: date == null ? '' : '${date.day}/${date.month}/${date.year}',
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: const Icon(Icons.calendar_today),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date ?? DateTime.now(),
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-        );
-        if (picked != null) onPicked(picked);
-      },
+      decoration: InputDecoration(labelText: label),
     );
   }
 
   void _confirmDelete(String id) {
-    final TextEditingController noteController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
+    final ctrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Hapus Data'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Yakin ingin menghapus data ini? Aksi ini memerlukan alasan penghapusan.',
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: 'Alasan Hapus',
-                  hintText: 'Contoh: Salah input data',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Alasan wajib diisi';
-                  }
-                  return null;
-                },
-                maxLines: 2,
-              ),
-            ],
-          ),
+        title: const Text('Hapus Voucher'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(labelText: 'Alasan'),
         ),
         actions: [
           TextButton(
@@ -659,61 +536,24 @@ class _HomePageState extends State<HomePage> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                final note = noteController.text.trim();
-                Navigator.pop(context);
-                setState(() => isLoading = true);
-
-                try {
-                  final result = await _redeemController.deleteRedeem(
-                    id: id,
-                    note: note,
-                    deletedBy: userName,
-                  );
-
-                  if (result['success'] == true) {
-                    await _loadRedeem();
-
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          result['message'] ?? 'Data berhasil dihapus',
-                        ),
-                      ),
-                    );
-                  } else {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          result['message'] ?? 'Gagal menghapus data',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Terjadi kesalahan'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                } finally {
-                  if (mounted) {
-                    setState(() => isLoading = false);
-                  }
-                }
-              }
+              Navigator.pop(context);
+              await _redeemController.deleteVoucher(
+                id: id,
+                note: ctrl.text,
+                deletedBy: userName,
+              );
+              await _loadVoucher();
             },
             child: const Text('Hapus'),
           ),
         ],
       ),
     );
+  }
+
+  String formatJourney(String value) {
+    if (value == 'ROUNDTRIP') return 'Round Trip';
+    return 'Single Journey';
   }
 }

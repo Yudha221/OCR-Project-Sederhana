@@ -88,14 +88,6 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
     try {
       await controller.uploadPhoto(lastRedeem.id, selectedImage!);
 
-      /// 🔥 FETCH DATA BARU
-      final updated = await controller.fetchLastRedeem();
-
-      setState(() {
-        lastRedeem = updated!; // reload data terbaru
-        selectedImage = null; // biar pakai foto dari server
-      });
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Upload berhasil')));
@@ -252,18 +244,6 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
             _infoRow('Stasiun', d.station),
             _infoRow('Operator', d.operatorName),
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Chip(
-                label: Text(
-                  d.status,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                backgroundColor: d.status == 'Success'
-                    ? Colors.green
-                    : Colors.grey,
-              ),
-            ),
           ],
         ),
       ),
