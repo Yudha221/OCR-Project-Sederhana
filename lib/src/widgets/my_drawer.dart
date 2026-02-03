@@ -102,7 +102,7 @@ class MyDrawer extends StatelessWidget {
   // ================= LOGOUT =================
   Widget _buildLogout(BuildContext context) {
     return MyDrawerTile(
-      text: 'Logout',
+      text: 'Sign Out',
       icon: Icons.logout,
       textColor: Colors.red,
       iconColor: Colors.red,
@@ -122,10 +122,10 @@ class MyDrawer extends StatelessWidget {
           children: const [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Text('Logout'),
+            Text('Sign Out'),
           ],
         ),
-        content: const Text('Yakin ingin logout dari aplikasi?'),
+        content: const Text('Yakin ingin sign out dari aplikasi?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -141,7 +141,7 @@ class MyDrawer extends StatelessWidget {
                 (_) => false,
               );
             },
-            child: const Text('Logout'),
+            child: const Text('Sign Out'),
           ),
         ],
       ),

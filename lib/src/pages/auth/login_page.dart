@@ -37,17 +37,21 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Image.asset(
                 'assets/images/woosh_text.png',
                 width: 250,
                 height: 250,
               ),
-              const Text(
-                'Welcome Back to FWC',
-                style: TextStyle(color: Colors.white, fontSize: 26),
+              Padding(
+                padding: const EdgeInsets.only(top: 80),
+                child: const Text(
+                  'Welcome Back to FWC',
+                  style: TextStyle(color: Colors.white, fontSize: 26),
+                ),
               ),
+
               const SizedBox(height: 25),
 
               MyTextField(

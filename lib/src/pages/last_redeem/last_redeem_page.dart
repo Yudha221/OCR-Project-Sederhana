@@ -17,11 +17,13 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
   late final LastRedeem lastRedeem;
 
   final LastRedeemController controller = LastRedeemController();
-
   final ImagePicker _picker = ImagePicker();
 
   File? selectedImage;
   bool isUploading = false;
+
+  // 🔥 TAMBAHAN: simpan URL foto hasil upload
+  String? uploadedPhotoUrl;
 
   @override
   void initState() {
@@ -29,12 +31,9 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
     lastRedeem = widget.data;
   }
 
-  // ================= PICK IMAGE (KAMERA + GALERI) =================
+  // ================= PICK IMAGE =================
   Future<void> _pickImage(ImageSource source) async {
-    final picked = await _picker.pickImage(
-      source: source,
-      imageQuality: 70, // 🔥 compress biar upload cepat
-    );
+    final picked = await _picker.pickImage(source: source, imageQuality: 70);
 
     if (picked != null) {
       setState(() {
@@ -76,17 +75,21 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
 
   // ================= UPLOAD IMAGE =================
   Future<void> _uploadImage() async {
-    if (selectedImage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Pilih foto dulu")));
-      return;
-    }
+    if (selectedImage == null) return;
 
     setState(() => isUploading = true);
 
     try {
-      await controller.uploadPhoto(lastRedeem.id, selectedImage!);
+      // 🔥 UPLOAD + AMBIL URL DARI SERVER
+      final photoUrl = await controller.uploadPhoto(
+        lastRedeem.id,
+        selectedImage!,
+      );
+
+      setState(() {
+        uploadedPhotoUrl = photoUrl;
+        selectedImage = null;
+      });
 
       ScaffoldMessenger.of(
         context,
@@ -98,9 +101,9 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      setState(() => isUploading = false);
     }
-
-    setState(() => isUploading = false);
   }
 
   @override
@@ -109,7 +112,7 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
         title: const Text('Last Redeem'),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        backgroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -140,7 +143,7 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
             GestureDetector(
               onTap: _showImageSource,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12), // 🔥 sudut kotak
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
                   width: double.infinity,
                   height: 180,
@@ -150,7 +153,30 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: selectedImage != null
+                      // 1️⃣ FOTO BARU DIPILIH
                       ? Image.file(selectedImage!, fit: BoxFit.cover)
+                      // 2️⃣ FOTO BARU SELESAI UPLOAD
+                      : uploadedPhotoUrl != null
+                      ? Image.network(uploadedPhotoUrl!, fit: BoxFit.cover)
+                      // 3️⃣ FOTO DARI SERVER (AWAL)
+                      : lastRedeem.photoUrl != null &&
+                            lastRedeem.photoUrl!.isNotEmpty
+                      ? Image.network(
+                          lastRedeem.photoUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(Icons.broken_image, size: 40),
+                            );
+                          },
+                        )
+                      // 4️⃣ BELUM ADA FOTO
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
@@ -162,7 +188,6 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -171,8 +196,6 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.blueGrey,
-                  disabledForegroundColor: Colors.white70,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -207,43 +230,18 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const CircleAvatar(radius: 28, child: Icon(Icons.person)),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      d.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(d.nik, style: const TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ],
-            ),
-            const Divider(height: 24),
+            _infoRow('Nama', d.name),
+            _infoRow('NIK', d.nik),
             _infoRow('Serial Card', d.serialNumber),
             _infoRow('Program', d.programType),
-            _infoRow('Category', d.cardCategory),
-            _infoRow('Type', d.cardType),
-            const Divider(height: 24),
-            const Text(
-              'Last Redeem',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
+            _infoRow('Kategori', d.cardCategory),
+            _infoRow('Tipe', d.cardType),
             _infoRow('Tanggal', d.redeemDate),
             _infoRow('Perjalanan', d.redeemType),
             _infoRow('Kuota Terpakai', d.quotaUsed),
             _infoRow('Sisa Kuota', d.remainingQuota),
             _infoRow('Stasiun', d.station),
             _infoRow('Operator', d.operatorName),
-            const SizedBox(height: 12),
           ],
         ),
       ),

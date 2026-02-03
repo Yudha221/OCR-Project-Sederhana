@@ -27,6 +27,13 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
   String userName = '';
 
+  // ================= FORM VALIDATION =================
+  bool get isFormFilled {
+    return _serialController.text.trim().isNotEmpty &&
+        _nameController.text.trim().isNotEmpty &&
+        _nikController.text.trim().length == 16;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,22 +65,11 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
   // ================= VERIFY =================
   void _verifyData() {
-    final serial = _serialController.text.trim();
-    final name = _nameController.text.trim();
-    final nik = _nikController.text.trim();
-
-    if (serial.isEmpty) {
-      _showSnack('Serial voucher wajib diisi', isError: true);
-      return;
-    }
-
-    if (name.isEmpty) {
-      _showSnack('Nama wajib diisi', isError: true);
-      return;
-    }
-
-    if (nik.isEmpty || nik.length != 16) {
-      _showSnack('NIK harus 16 digit', isError: true);
+    if (!isFormFilled) {
+      _showSnack(
+        'Serial, Nama, dan NIK wajib diisi sebelum verify',
+        isError: true,
+      );
       return;
     }
 
@@ -96,11 +92,16 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
       if (result['success'] == true) {
         _showSnack(result['message'] ?? 'Voucher berhasil diredeem');
+
+        // RESET STATE (1x REDEEM)
         _serialController.clear();
         _nameController.clear();
         _nikController.clear();
-        isVerified = false;
-        hasScanned = false;
+
+        setState(() {
+          isVerified = false;
+          hasScanned = false;
+        });
       } else {
         _showSnack(result['message'] ?? 'Gagal redeem voucher', isError: true);
       }
@@ -174,8 +175,6 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
                         ),
                       ),
                     ),
-
-                    // ===== CLOSE CAMERA BUTTON =====
                     Positioned(
                       top: 8,
                       right: 8,
@@ -230,19 +229,20 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 6),
-
                         Text(
                           'Petugas: $userName',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
                         ),
-
                         const SizedBox(height: 32),
 
-                        // ===== SERIAL =====
+                        // SERIAL
                         TextField(
                           controller: _serialController,
+                          enabled: !isVerified,
                           onChanged: (_) => setState(() => isVerified = false),
                           decoration: InputDecoration(
                             labelText: 'Serial Voucher',
@@ -260,26 +260,29 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
                                     : Icons.qr_code_scanner,
                                 color: Colors.red,
                               ),
-                              onPressed: () {
-                                if (isScanning) {
-                                  _stopScan();
-                                } else {
-                                  setState(() {
-                                    isScanning = true;
-                                    hasScanned = false;
-                                    isVerified = false;
-                                  });
-                                }
-                              },
+                              onPressed: isVerified
+                                  ? null
+                                  : () {
+                                      if (isScanning) {
+                                        _stopScan();
+                                      } else {
+                                        setState(() {
+                                          isScanning = true;
+                                          hasScanned = false;
+                                          isVerified = false;
+                                        });
+                                      }
+                                    },
                             ),
                           ),
                         ),
 
                         const SizedBox(height: 20),
 
-                        // ===== NAMA =====
+                        // NAMA
                         TextField(
                           controller: _nameController,
+                          enabled: !isVerified,
                           onChanged: (_) => setState(() => isVerified = false),
                           decoration: InputDecoration(
                             labelText: 'Nama',
@@ -294,9 +297,10 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
                         const SizedBox(height: 16),
 
-                        // ===== NIK =====
+                        // NIK
                         TextField(
                           controller: _nikController,
+                          enabled: !isVerified,
                           keyboardType: TextInputType.number,
                           maxLength: 16,
                           onChanged: (_) => setState(() => isVerified = false),
@@ -314,12 +318,15 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
                         const SizedBox(height: 24),
 
-                        // ===== VERIFY BUTTON =====
+                        // VERIFY
                         SizedBox(
                           width: double.infinity,
                           height: 48,
                           child: OutlinedButton(
-                            onPressed: isLoading ? null : _verifyData,
+                            onPressed:
+                                (!isFormFilled || isLoading || isVerified)
+                                ? null
+                                : _verifyData,
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.red),
                               shape: RoundedRectangleBorder(
@@ -338,18 +345,16 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
                         const SizedBox(height: 16),
 
-                        // ===== REDEEM BUTTON =====
+                        // REDEEM
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: (!isVerified || isLoading)
-                                ? null
-                                : _redeemVoucher,
+                            onPressed: (isVerified && !isLoading)
+                                ? _redeemVoucher
+                                : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isVerified
-                                  ? Colors.red
-                                  : Colors.red.shade200,
+                              backgroundColor: Colors.red,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),

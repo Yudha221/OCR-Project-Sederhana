@@ -12,7 +12,7 @@ class Api {
   Api._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: 'https://fwc-kcic.me/api',
+        baseUrl: 'https://rewards-dev.kcic.co.id/api/',
         headers: {'Accept': 'application/json'},
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
