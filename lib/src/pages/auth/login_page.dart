@@ -33,54 +33,66 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true, // 🔥 INI KUNCINYA
       backgroundColor: const Color(0xFF7A1E2D),
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Image.asset(
-                'assets/images/woosh_text.png',
-                width: 250,
-                height: 250,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 80),
-                child: const Text(
-                  'Welcome Back to FWC',
-                  style: TextStyle(color: Colors.white, fontSize: 26),
+        child: SingleChildScrollView(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // LOGO (TETAP)
+                Image.asset(
+                  'assets/images/Whoosh_Member_of_KAI.png',
+                  width: 250,
+                  height: 250,
                 ),
-              ),
 
-              const SizedBox(height: 25),
-
-              MyTextField(
-                controller: _controller.usernameController,
-                hintText: 'username',
-                obscureText: false,
-              ),
-
-              const SizedBox(height: 10),
-
-              MyTextField(
-                controller: _controller.passwordController,
-                hintText: 'password',
-                obscureText: _obscurePassword,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                // TITLE (TETAP)
+                Padding(
+                  padding: const EdgeInsets.only(top: 50),
+                  child: const Text(
+                    'Welcome Back to FWC',
+                    style: TextStyle(color: Colors.white, fontSize: 26),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
                 ),
-              ),
 
-              const SizedBox(height: 25),
-              MyButton(onTap: signUserIn),
-            ],
+                const SizedBox(height: 25),
+
+                // USERNAME
+                MyTextField(
+                  controller: _controller.usernameController,
+                  hintText: 'username',
+                  obscureText: false,
+                ),
+
+                const SizedBox(height: 10),
+
+                // PASSWORD
+                MyTextField(
+                  controller: _controller.passwordController,
+                  hintText: 'password',
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // BUTTON
+                MyButton(onTap: signUserIn),
+              ],
+            ),
           ),
         ),
       ),

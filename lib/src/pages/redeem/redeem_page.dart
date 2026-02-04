@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:ocr_project/src/controllers/redeem_controller.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:ocr_project/src/controllers/last_redeem_controller.dart';
 
 class RedeemPage extends StatefulWidget {
   const RedeemPage({super.key});
@@ -21,6 +24,11 @@ class _RedeemPageState extends State<RedeemPage> {
   bool _isVerifying = false;
   bool _isRedeeming = false; // ✅ TAMBAHAN
 
+  // ===== LAST REDEEM (TAMBAHAN TANPA UBAH LOGIC)
+  final LastRedeemController _lastRedeemController = LastRedeemController();
+  final ImagePicker _picker = ImagePicker();
+  File? _lastRedeemImage;
+
   // DATA DARI API
   String ownerName = '';
   String ownerNik = '';
@@ -31,6 +39,10 @@ class _RedeemPageState extends State<RedeemPage> {
   // ✅ TAMBAHAN
   int get _requiredQuota {
     return _redeemType == 1 ? 1 : 2;
+  }
+
+  Color _quotaColor(int quota) {
+    return quota <= 1 ? Colors.red : Colors.black;
   }
 
   @override
@@ -177,6 +189,7 @@ class _RedeemPageState extends State<RedeemPage> {
   // ================= REDEEM (POST API) ✅ TAMBAHAN
   Future<void> _redeem() async {
     if (!_isVerified) return;
+    final beforeRedeemQuota = remainingQuota;
 
     if (remainingQuota < _requiredQuota) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -196,16 +209,22 @@ class _RedeemPageState extends State<RedeemPage> {
         serialNumber: _serialController.text.trim(),
         redeemType: _redeemType,
       );
+      // ✅ HITUNG SENDIRI (JANGAN PAKAI RESPONSE)
+      final afterRedeemQuota = beforeRedeemQuota - _requiredQuota;
 
+      setState(() {
+        remainingQuota = afterRedeemQuota;
+      });
+
+      // ✅ KAMERA CUMA KALAU HABIS
+      if (afterRedeemQuota == 0) {
+        final lastRedeemId = response['data']['transactionNumber'];
+        await _openLastRedeemCamera(lastRedeemId);
+        return;
+      }
       if (response['success'] != true) {
         throw Exception(response['message']);
       }
-
-      final data = response['data'];
-
-      setState(() {
-        remainingQuota = int.tryParse(data['quotaRemaining'].toString()) ?? 0;
-      });
 
       _showRedeemSuccessDialog();
     } catch (e) {
@@ -215,6 +234,53 @@ class _RedeemPageState extends State<RedeemPage> {
     } finally {
       setState(() => _isRedeeming = false);
     }
+  }
+
+  // ================= LAST REDEEM CAMERA
+  Future<void> _openLastRedeemCamera(String lastRedeemId) async {
+    final XFile? photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+    );
+
+    if (photo != null) {
+      _lastRedeemImage = File(photo.path);
+    }
+
+    _showLastRedeemDialog(lastRedeemId);
+  }
+
+  void _showLastRedeemDialog(String lastRedeemId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Redeem Terakhir'),
+        content: const Text('Simpan bukti last redeem?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showRedeemSuccessDialog();
+            },
+            child: const Text('Tanpa Bukti'),
+          ),
+          ElevatedButton(
+            onPressed: _lastRedeemImage == null
+                ? null
+                : () async {
+                    Navigator.pop(context);
+                    await _lastRedeemController.uploadPhoto(
+                      lastRedeemId,
+                      _lastRedeemImage!,
+                    );
+                    _showRedeemSuccessDialog();
+                  },
+            child: const Text('Dengan Bukti'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showRedeemSuccessDialog() {
@@ -370,10 +436,10 @@ class _RedeemPageState extends State<RedeemPage> {
 
                         Text(
                           'Sisa Kuota: $remainingQuota',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: Colors.red,
+                            color: _quotaColor(remainingQuota),
                           ),
                         ),
                       ],

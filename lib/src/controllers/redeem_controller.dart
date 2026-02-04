@@ -9,7 +9,7 @@ class RedeemController {
   // =====================
   Future<List<Redeem>> fetchAllRedeem() async {
     int page = 1;
-    const int limit = 50; // ambil banyak biar cepat
+    const int limit = 1000; // ambil banyak biar cepat
     List<Redeem> allData = [];
 
     while (true) {

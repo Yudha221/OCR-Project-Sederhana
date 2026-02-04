@@ -188,18 +188,40 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // ================= SEARCH =================
   Widget _searchSection() {
-    return TextField(
-      controller: _searchController,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.search),
-        hintText: 'Cari nama / NIK / serial',
-        border: OutlineInputBorder(),
+    return SizedBox(
+      height: 42,
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Cari nama / NIK / serial',
+          prefixIcon: const Icon(Icons.search, size: 20),
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+            borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          ),
+        ),
+        onChanged: (v) {
+          searchQuery = v.toLowerCase();
+          currentPage = 1;
+          setState(_applyFilterAndPagination);
+        },
       ),
-      onChanged: (v) {
-        searchQuery = v.toLowerCase();
-        currentPage = 1;
-        setState(_applyFilterAndPagination);
-      },
     );
   }
 

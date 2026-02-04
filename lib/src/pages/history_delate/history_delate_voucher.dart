@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ocr_project/src/controllers/history_delete_controller.dart';
+import 'package:ocr_project/src/controllers/voucher_delete_controller.dart';
+import 'package:ocr_project/src/models/redeem.dart';
 
-/// ===========================================================
-/// HISTORY DELETE VOUCHER PAGE
-/// Tampilan sama seperti HistoryDeletePage (FWC)
-/// ===========================================================
 class HistoryDeleteVoucherPage extends StatefulWidget {
   const HistoryDeleteVoucherPage({super.key});
 
@@ -14,24 +11,27 @@ class HistoryDeleteVoucherPage extends StatefulWidget {
 }
 
 class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
-  // ================= CONTROLLER =================
-  final controller = HistoryDeleteController();
-
-  // ================= SEARCH =================
+  final controller = VoucherDeleteController();
   final searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
-    // load data pertama kali
-    controller.load().then((_) => setState(() {}));
+    controller.load().then((_) {
+      if (mounted) setState(() {});
+    });
 
-    // listener search
     searchCtrl.addListener(() {
       controller.search(searchCtrl.text);
       setState(() {});
     });
+  }
+
+  @override
+  void dispose() {
+    searchCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -40,17 +40,12 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xffF7F8FA),
-      appBar: AppBar(
-        title: const Text('Riwayat Penghapusan Voucher'),
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Riwayat Penghapusan Voucher')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // ===================================================
-            // HEADER
-            // ===================================================
+            // ================= HEADER =================
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -68,7 +63,7 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Total Data : ${controller.filteredData.isNotEmpty ? controller.filteredData.length : controller.allData.length}',
+                    'Total Data : ${controller.filteredData.isNotEmpty ? controller.filteredData.length : controller.tableData.length}',
                     style: const TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.w600,
@@ -80,13 +75,11 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
 
             const SizedBox(height: 12),
 
-            // ===================================================
-            // SEARCH
-            // ===================================================
+            // ================= SEARCH =================
             TextField(
               controller: searchCtrl,
               decoration: InputDecoration(
-                hintText: 'Cari transaksi, voucher, operator, stasiun',
+                hintText: 'Cari transaksi, pelanggan, operator, stasiun',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.white,
@@ -99,12 +92,12 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
 
             const SizedBox(height: 12),
 
-            // ===================================================
-            // TABLE
-            // ===================================================
+            // ================= TABLE =================
             Expanded(
               child: controller.isLoading
                   ? const Center(child: CircularProgressIndicator())
+                  : controller.tableData.isEmpty
+                  ? const Center(child: Text('Data tidak tersedia'))
                   : SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SingleChildScrollView(
@@ -113,43 +106,63 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                             Colors.red.shade50,
                           ),
                           columns: const [
+                            DataColumn(label: Text('Tanggal Dihapus')),
+                            DataColumn(label: Text('Nama Pelanggan')),
+                            DataColumn(label: Text('NIK')),
                             DataColumn(label: Text('Nomor Transaksi')),
                             DataColumn(label: Text('Serial Voucher')),
                             DataColumn(label: Text('Kategori')),
                             DataColumn(label: Text('Tipe Voucher')),
-                            DataColumn(label: Text('Tipe Perjalanan')),
+                            DataColumn(label: Text('Sisa Kuota')),
+                            DataColumn(label: Text('Perjalanan')),
                             DataColumn(label: Text('Operator')),
                             DataColumn(label: Text('Stasiun')),
-                            DataColumn(label: Text('Alasan')),
+                            DataColumn(label: Text('Alasan Hapus')),
                           ],
-                          rows: controller.tableData.map((e) {
-                            final journey = e['redeemType'];
-
+                          rows: controller.tableData.map<DataRow>((Redeem e) {
                             return DataRow(
                               cells: [
-                                DataCell(Text(e['transactionNumber'] ?? '-')),
+                                // Tanggal Dihapus
                                 DataCell(
-                                  Text(e['voucher']?['serialNumber'] ?? '-'),
-                                ),
-                                DataCell(
-                                  _badge(e['voucher']?['category'] ?? '-'),
-                                ),
-                                DataCell(Text(e['voucher']?['type'] ?? '-')),
-
-                                // ================= PERJALANAN =================
-                                DataCell(_journeyBadge(journey)),
-
-                                DataCell(
-                                  Text(e['operator']?['fullName'] ?? '-'),
-                                ),
-                                DataCell(
-                                  Text(e['station']?['stationName'] ?? '-'),
+                                  Text(
+                                    e.redeemDate != '-'
+                                        ? e.redeemDate.substring(0, 10)
+                                        : '-',
+                                  ),
                                 ),
 
-                                // ================= ALASAN =================
+                                // Nama Pelanggan
+                                DataCell(Text(e.customerName)),
+
+                                // NIK
+                                DataCell(Text(e.identityNumber)),
+
+                                // Nomor Transaksi
+                                DataCell(Text(e.transactionNumber)),
+
+                                // Serial Voucher
+                                DataCell(Text(e.serialNumber)),
+
+                                // Kategori
+                                DataCell(_categoryBadge(e.cardCategory)),
+
+                                // Tipe Voucher
+                                DataCell(Text(e.cardType)),
+
+                                DataCell(_quotaBadge(e.remainingQuota)),
+
+                                // Perjalanan
+                                DataCell(_journeyBadge(e.journeyType)),
+
+                                // Operator
+                                DataCell(Text(e.operatorName)),
+
+                                // Stasiun
+                                DataCell(Text(e.station)),
+
+                                // Alasan Hapus
                                 DataCell(
-                                  e['notes'] != null &&
-                                          e['notes'].toString().isNotEmpty
+                                  e.note.isNotEmpty && e.note != '-'
                                       ? TextButton(
                                           style: TextButton.styleFrom(
                                             foregroundColor: Colors.red,
@@ -167,14 +180,19 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                                           ),
                                           onPressed: () => _showReasonDialog(
                                             context,
-                                            e['notes'],
+                                            e.note,
                                           ),
-                                          child: const Text(
-                                            'Lihat Alasan',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 12,
-                                            ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Text(
+                                                'Lihat Alasan',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         )
                                       : const Text(
@@ -193,10 +211,9 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                     ),
             ),
 
-            // ===================================================
-            // PAGINATION
-            // ===================================================
             const SizedBox(height: 8),
+
+            // ================= PAGINATION =================
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -227,70 +244,97 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
     );
   }
 
-  // ===========================================================
-  // BADGE KATEGORI
-  // ===========================================================
-  Widget _badge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(text),
-    );
-  }
-
-  // ===========================================================
-  // BADGE PERJALANAN (INI YANG PENTING)
-  // ===========================================================
+  // ================= JOURNEY BADGE =================
   Widget _journeyBadge(String type) {
-    final isRound = type.toUpperCase() == 'ROUNDTRIP';
+    final isSingle = type.toUpperCase() == 'SINGLE';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isRound ? Colors.purple.shade50 : Colors.orange.shade50,
+        color: isSingle ? Colors.orange.shade50 : Colors.blue.shade50,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        isRound ? 'Round Trip' : 'Single Journey',
+        isSingle ? 'Single Journey' : 'Multi Journey',
         style: TextStyle(
-          color: isRound ? Colors.purple : Colors.orange,
+          color: isSingle ? Colors.orange : Colors.blue,
           fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  // ===========================================================
-  // DIALOG ALASAN
-  // ===========================================================
+  // ================= DIALOG ALASAN =================
   void _showReasonDialog(BuildContext context, String reason) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Row(
-          children: const [
-            Icon(Icons.info_outline, color: Colors.red),
-            SizedBox(width: 8),
-            Text(
-              'Alasan Penghapusan',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 400,
-          child: Text(reason, style: const TextStyle(fontSize: 14)),
-        ),
+        title: const Text('Alasan Penghapusan'),
+        content: Text(reason),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
         ],
+      ),
+    );
+  }
+
+  // ================= CATEGORY BADGE =================
+  Widget _categoryBadge(String category) {
+    final value = category.toLowerCase();
+    final isPaid = value == 'paid';
+    final isUnpaid = value == 'unpaid';
+
+    Color borderColor;
+    Color bgColor;
+    Color textColor;
+
+    if (isPaid) {
+      borderColor = Colors.blue;
+      bgColor = Colors.blue.shade50;
+      textColor = Colors.blue;
+    } else if (isUnpaid) {
+      borderColor = Colors.red;
+      bgColor = Colors.red.shade50;
+      textColor = Colors.red;
+    } else {
+      borderColor = Colors.grey;
+      bgColor = Colors.grey.shade200;
+      textColor = Colors.grey.shade800;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        category,
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _quotaBadge(int remainingQuota) {
+    final isEmpty = remainingQuota <= 0;
+
+    return Center(
+      child: Text(
+        isEmpty ? '0' : '$remainingQuota',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: isEmpty ? Colors.red : Colors.orange,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
       ),
     );
   }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/voucher_controller.dart';
 
 class RedeemVoucherPage extends StatefulWidget {
@@ -11,377 +10,359 @@ class RedeemVoucherPage extends StatefulWidget {
 }
 
 class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
-  final AuthController _authController = AuthController();
   final VoucherRedeemController _controller = VoucherRedeemController();
 
   final TextEditingController _serialController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _nikController = TextEditingController();
 
-  final MobileScannerController _scannerController = MobileScannerController();
+  MobileScannerController? _scannerController;
 
-  bool isLoading = false;
-  bool isScanning = false;
-  bool hasScanned = false;
-  bool isVerified = false;
+  bool _isScanning = false;
+  bool _isSerialVerified = false;
+  bool _isVerifying = false;
+  bool _isRedeeming = false;
 
-  String userName = '';
+  Map<String, dynamic>? _cardData;
 
-  // ================= FORM VALIDATION =================
-  bool get isFormFilled {
-    return _serialController.text.trim().isNotEmpty &&
-        _nameController.text.trim().isNotEmpty &&
-        _nikController.text.trim().length == 16;
-  }
+  bool get _isFormValid =>
+      _nameController.text.trim().isNotEmpty &&
+      _nikController.text.trim().length == 16;
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+    );
   }
 
   @override
   void dispose() {
-    _scannerController.dispose();
+    _scannerController?.dispose();
     _serialController.dispose();
     _nameController.dispose();
     _nikController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadUser() async {
-    userName = await _authController.getUserName();
-    if (mounted) setState(() {});
-  }
-
-  // ================= STOP SCAN =================
-  void _stopScan() {
-    _scannerController.stop();
+  // ================= RESET
+  void _reset() {
     setState(() {
-      isScanning = false;
-      hasScanned = false;
+      _isSerialVerified = false;
+      _cardData = null;
+      _nameController.clear();
+      _nikController.clear();
     });
   }
 
-  // ================= VERIFY =================
-  void _verifyData() {
-    if (!isFormFilled) {
-      _showSnack(
-        'Serial, Nama, dan NIK wajib diisi sebelum verify',
-        isError: true,
-      );
+  // ================= SCAN SERIAL
+  void _openScanner() {
+    if (_isScanning) return;
+    setState(() => _isScanning = true);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black,
+      isScrollControlled: true,
+      builder: (_) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: Stack(
+            children: [
+              MobileScanner(
+                controller: _scannerController!,
+                onDetect: (capture) {
+                  if (capture.barcodes.isEmpty) return;
+                  final value = capture.barcodes.first.rawValue;
+                  if (value == null || value.isEmpty) return;
+
+                  Navigator.pop(context);
+                  setState(() {
+                    _serialController.text = value;
+                    _isScanning = false;
+                    _reset();
+                  });
+                },
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    setState(() => _isScanning = false);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() => setState(() => _isScanning = false));
+  }
+
+  // ================= VERIFY SERIAL (API)
+  Future<void> _verifySerial() async {
+    final serial = _serialController.text.trim();
+    if (serial.isEmpty) {
+      _snack('Serial voucher wajib diisi', isError: true);
       return;
     }
 
-    setState(() => isVerified = true);
-    _showSnack('Data valid, silakan redeem');
+    try {
+      setState(() => _isVerifying = true);
+
+      final res = await _controller.verifySerial(serial);
+
+      if (res['success'] != true) {
+        throw Exception(res['message'] ?? 'Voucher tidak ditemukan');
+      }
+
+      setState(() {
+        _isSerialVerified = true;
+        _cardData = res['data']; // 🔥 SIMPAN DATA CARD
+      });
+
+      _snack('Voucher valid, silakan isi Nama & NIK');
+    } catch (e) {
+      _snack(e.toString(), isError: true);
+    } finally {
+      setState(() => _isVerifying = false);
+    }
   }
 
-  // ================= REDEEM =================
+  // ================= REDEEM
   Future<void> _redeemVoucher() async {
-    setState(() => isLoading = true);
+    if (!_isSerialVerified || !_isFormValid) return;
 
     try {
-      final result = await _controller.redeemVoucher(
+      setState(() => _isRedeeming = true);
+
+      final res = await _controller.redeemVoucher(
         serial: _serialController.text.trim(),
         name: _nameController.text.trim(),
         nik: _nikController.text.trim(),
       );
 
-      if (!mounted) return;
-
-      if (result['success'] == true) {
-        _showSnack(result['message'] ?? 'Voucher berhasil diredeem');
-
-        // RESET STATE (1x REDEEM)
-        _serialController.clear();
-        _nameController.clear();
-        _nikController.clear();
-
-        setState(() {
-          isVerified = false;
-          hasScanned = false;
-        });
-      } else {
-        _showSnack(result['message'] ?? 'Gagal redeem voucher', isError: true);
+      if (res['success'] != true) {
+        throw Exception(res['message'] ?? 'Redeem gagal');
       }
-    } catch (_) {
-      if (!mounted) return;
-      _showSnack('Terjadi kesalahan saat redeem', isError: true);
+
+      _showSuccess();
+    } catch (e) {
+      _snack(e.toString(), isError: true);
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      setState(() => _isRedeeming = false);
     }
   }
 
-  void _showSnack(String message, {bool isError = false}) {
+  void _showSuccess() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('Berhasil'),
+          content: const Text('Voucher berhasil diredeem'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _snack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(msg),
         backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
   }
 
+  // ================= UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF7A1E2D),
-        title: const Text(
-          'Redeem Voucher',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-      body: SafeArea(
+      appBar: AppBar(title: const Text('Redeem Voucher')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ================= SCANNER =================
-            if (isScanning)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Stack(
-                  children: [
-                    Container(
-                      height: 240,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: MobileScanner(
-                          controller: _scannerController,
-                          onDetect: (capture) {
-                            if (hasScanned) return;
+            const Text(
+              'Redeem Voucher',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 24),
 
-                            final barcode = capture.barcodes.first.rawValue;
-
-                            if (barcode != null && barcode.isNotEmpty) {
-                              hasScanned = true;
-                              _serialController.text = barcode;
-
-                              _scannerController.stop();
-                              setState(() {
-                                isScanning = false;
-                                isVerified = false;
-                              });
-
-                              _showSnack(
-                                'Serial terisi, isi Nama & NIK lalu verify',
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: InkWell(
-                        onTap: _stopScan,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+            // SERIAL
+            TextField(
+              controller: _serialController,
+              decoration: InputDecoration(
+                labelText: 'Serial Voucher',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: _openScanner,
                 ),
               ),
+              onChanged: (_) => _reset(),
+            ),
 
-            // ================= FORM =================
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 24,
+            const SizedBox(height: 12),
+
+            // VERIFY BUTTON
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isVerifying || _isSerialVerified
+                    ? null
+                    : _verifySerial,
+                child: _isVerifying
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Verify Voucher'),
+              ),
+            ),
+
+            // ================= CARD DATA
+            if (_cardData != null) ...[
+              const SizedBox(height: 20),
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: const [
-                            Icon(
-                              Icons.confirmation_number_outlined,
-                              color: Colors.red,
-                              size: 28,
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Redeem Voucher',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Informasi Voucher',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Petugas: $userName',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 13,
-                          ),
+                      ),
+                      const Divider(height: 24),
+
+                      Text('Nama Pemilik : ${_cardData!['customerName']}'),
+                      const SizedBox(height: 6),
+                      Text('NIK          : ${_cardData!['nik']}'),
+                      const SizedBox(height: 6),
+                      Text('Serial       : ${_cardData!['serialNumber']}'),
+                      const SizedBox(height: 6),
+                      Text('Kategori     : ${_cardData!['cardCategory']}'),
+                      const SizedBox(height: 6),
+                      Text('Tipe Kartu   : ${_cardData!['cardType']}'),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Status       : ${_cardData!['statusActive']}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _cardData!['statusActive'] == 'ACTIVE'
+                              ? Colors.green
+                              : Colors.red,
                         ),
-                        const SizedBox(height: 32),
-
-                        // SERIAL
-                        TextField(
-                          controller: _serialController,
-                          enabled: !isVerified,
-                          onChanged: (_) => setState(() => isVerified = false),
-                          decoration: InputDecoration(
-                            labelText: 'Serial Voucher',
-                            hintText: 'Scan / masukkan serial voucher',
-                            helperText: 'Klik icon QR untuk scan',
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                isScanning
-                                    ? Icons.close
-                                    : Icons.qr_code_scanner,
-                                color: Colors.red,
-                              ),
-                              onPressed: isVerified
-                                  ? null
-                                  : () {
-                                      if (isScanning) {
-                                        _stopScan();
-                                      } else {
-                                        setState(() {
-                                          isScanning = true;
-                                          hasScanned = false;
-                                          isVerified = false;
-                                        });
-                                      }
-                                    },
-                            ),
-                          ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Sisa Kuota: ${_cardData!['quotaRemaining']}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.red,
                         ),
-
-                        const SizedBox(height: 20),
-
-                        // NAMA
-                        TextField(
-                          controller: _nameController,
-                          enabled: !isVerified,
-                          onChanged: (_) => setState(() => isVerified = false),
-                          decoration: InputDecoration(
-                            labelText: 'Nama',
-                            hintText: 'Masukkan nama penerima',
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // NIK
-                        TextField(
-                          controller: _nikController,
-                          enabled: !isVerified,
-                          keyboardType: TextInputType.number,
-                          maxLength: 16,
-                          onChanged: (_) => setState(() => isVerified = false),
-                          decoration: InputDecoration(
-                            labelText: 'NIK',
-                            hintText: 'Masukkan NIK',
-                            counterText: '',
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // VERIFY
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: OutlinedButton(
-                            onPressed:
-                                (!isFormFilled || isLoading || isVerified)
-                                ? null
-                                : _verifyData,
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.red),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              'Verify Data',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // REDEEM
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: (isVerified && !isLoading)
-                                ? _redeemVoucher
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Redeem Voucher',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // NAMA
+            TextField(
+              controller: _nameController,
+              enabled: _isSerialVerified,
+              decoration: InputDecoration(
+                labelText: 'Nama Penerima',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+
+            const SizedBox(height: 16),
+
+            // NIK
+            TextField(
+              controller: _nikController,
+              enabled: _isSerialVerified,
+              keyboardType: TextInputType.number,
+              maxLength: 16,
+              decoration: InputDecoration(
+                labelText: 'NIK',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+
+            const SizedBox(height: 24),
+
+            // REDEEM
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: (_isSerialVerified && _isFormValid && !_isRedeeming)
+                    ? _redeemVoucher
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: (_isSerialVerified && _isFormValid)
+                      ? Colors.green
+                      : Colors.grey,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade400,
+                  disabledForegroundColor: Colors.white70,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: _isRedeeming
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Redeem Voucher',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],

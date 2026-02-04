@@ -25,6 +25,13 @@ class VoucherRedeemController {
   }
 
   // =====================
+  // VERIFY SERIAL
+  // =====================
+  Future<Map<String, dynamic>> verifySerial(String serialNumber) {
+    return _repo.verifySerial(serialNumber);
+  }
+
+  // =====================
   // REDEEM
   // =====================
   Future<Map<String, dynamic>> redeemVoucher({

@@ -38,7 +38,7 @@ class _HistoryDeletePageState extends State<HistoryDeletePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Riwayat Penghapusan',
+                  'Riwayat Penghapusan FWC',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Container(

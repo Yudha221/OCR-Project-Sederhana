@@ -20,7 +20,9 @@ class HistoryDeleteController {
     final res = await _repo.fetchHistoryDelete(limit: 1000);
     final result = res.data['data'];
 
-    allData = result['items'] ?? [];
+    allData = (result['items'] as List)
+        .where((e) => e['card']?['programType'] == 'FWC')
+        .toList();
     currentPage = 1;
 
     _applyPagination();

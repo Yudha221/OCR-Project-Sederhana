@@ -196,14 +196,14 @@ class _HomePageState extends State<HomePage> {
   // ================= SEARCH =================
   Widget _searchSection() {
     return SizedBox(
-      height: 42, // 👈 PERKECIL TINGGI
+      height: 42,
       child: TextField(
         controller: _searchController,
         style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Cari nama / NIK / serial',
           prefixIcon: const Icon(Icons.search, size: 20),
-          isDense: true, // 👈 PENTING BIAR PADAT
+          isDense: true,
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
