@@ -166,11 +166,17 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
           ),
         ),
         ElevatedButton(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            // 🔥 BUKA HALAMAN REDEEM & TUNGGU HASIL
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const RedeemVoucherPage()),
             );
+
+            // 🔥 TERIMA SINYAL & RELOAD TABEL
+            if (result == true) {
+              await _loadVoucher();
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
@@ -340,8 +346,10 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
             columnSpacing: 24,
             columns: const [
               DataColumn(label: Text('Tanggal Redeem')),
-              DataColumn(label: Text('Nama Pelanggan')),
-              DataColumn(label: Text('NIK')),
+              DataColumn(label: Text('Nama PIC')),
+              DataColumn(label: Text('NIK PIC')),
+              DataColumn(label: Text('Nama Pelangan')),
+              DataColumn(label: Text('NIK Pelangan')),
               DataColumn(label: Text('Nomor Transaksi')),
               DataColumn(label: Text('Serial Voucher')),
               DataColumn(label: Text('Kategori Voucher')),
@@ -358,6 +366,23 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                   DataCell(Text(e.redeemDate)),
                   DataCell(Text(e.customerName)),
                   DataCell(Text(e.identityNumber)),
+                  DataCell(
+                    Text(
+                      e.passengers.isNotEmpty &&
+                              e.passengers.first.passengerName.trim().isNotEmpty
+                          ? e.passengers.first.passengerName
+                          : '-',
+                    ),
+                  ),
+
+                  DataCell(
+                    Text(
+                      e.passengers.isNotEmpty &&
+                              e.passengers.first.nik.trim().isNotEmpty
+                          ? e.passengers.first.nik
+                          : '-',
+                    ),
+                  ),
                   DataCell(Text(e.transactionNumber)),
                   DataCell(Text(e.serialNumber)),
 

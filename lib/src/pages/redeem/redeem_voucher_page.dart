@@ -170,8 +170,8 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
           actions: [
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.pop(context, true);
+                Navigator.pop(context, true);
               },
               child: const Text('OK'),
             ),
@@ -186,6 +186,36 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
       SnackBar(
         content: Text(msg),
         backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Widget infoRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    FontWeight? weight,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const Text(': '),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: valueColor, fontWeight: weight),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -259,33 +289,24 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
                       ),
                       const Divider(height: 24),
 
-                      Text('Nama Pemilik : ${_cardData!['customerName']}'),
-                      const SizedBox(height: 6),
-                      Text('NIK          : ${_cardData!['nik']}'),
-                      const SizedBox(height: 6),
-                      Text('Serial       : ${_cardData!['serialNumber']}'),
-                      const SizedBox(height: 6),
-                      Text('Kategori     : ${_cardData!['cardCategory']}'),
-                      const SizedBox(height: 6),
-                      Text('Tipe Kartu   : ${_cardData!['cardType']}'),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Status       : ${_cardData!['statusActive']}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _cardData!['statusActive'] == 'ACTIVE'
-                              ? Colors.green
-                              : Colors.red,
-                        ),
+                      infoRow(
+                        'Nama Perusahaan',
+                        _cardData?['customerName'] ?? '-',
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Sisa Kuota: ${_cardData!['quotaRemaining']}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.red,
-                        ),
+                      infoRow('NIK PIC', _cardData?['nik'] ?? '-'),
+                      infoRow(
+                        'Serial Voucher',
+                        _cardData?['serialNumber'] ?? '-',
+                      ),
+                      infoRow('Kategori', _cardData?['cardCategory'] ?? '-'),
+                      infoRow('Tipe Kartu', _cardData?['cardType'] ?? '-'),
+                      infoRow(
+                        'Status',
+                        _cardData?['statusActive'] ?? '-',
+                        valueColor: _cardData?['statusActive'] == 'ACTIVE'
+                            ? Colors.green
+                            : Colors.red,
+                        weight: FontWeight.bold,
                       ),
                     ],
                   ),
@@ -300,7 +321,7 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
               controller: _nameController,
               enabled: _isSerialVerified,
               decoration: InputDecoration(
-                labelText: 'Nama Penerima',
+                labelText: 'Nama Penumpang',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -317,7 +338,7 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
               keyboardType: TextInputType.number,
               maxLength: 16,
               decoration: InputDecoration(
-                labelText: 'NIK',
+                labelText: 'NIK Penumpang',
                 counterText: '',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),

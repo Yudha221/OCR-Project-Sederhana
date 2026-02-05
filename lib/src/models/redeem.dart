@@ -1,3 +1,5 @@
+import 'passenger.dart';
+
 class Redeem {
   final String id; // ✅ STRING UUID
   final String redeemDate;
@@ -15,6 +17,7 @@ class Redeem {
   final String operatorName;
   final String station;
   final bool lastRedeem;
+  final List<Passenger> passengers;
 
   Redeem({
     required this.id,
@@ -33,12 +36,13 @@ class Redeem {
     required this.operatorName,
     required this.station,
     required this.lastRedeem,
+    required this.passengers,
   });
 
   factory Redeem.fromJson(Map<String, dynamic> json) {
     // 🔥 DEBUG: Cek apakah notes masuk
     if (json['notes'] != null) {
-       print('DEBUG JSON NOTES (ID: ${json['id']}): ${json['notes']}');
+      print('DEBUG JSON NOTES (ID: ${json['id']}): ${json['notes']}');
     }
 
     final card = json['card'] ?? {};
@@ -53,6 +57,10 @@ class Redeem {
         int.tryParse(json['remainingQuota']?.toString() ?? '0') ?? 0;
     final int quotaUsed =
         int.tryParse(json['quotaUsed']?.toString() ?? '0') ?? 0;
+    final passengersJson = json['passengers'] as List<dynamic>? ?? [];
+    final passengers = passengersJson
+        .map((e) => Passenger.fromJson(e))
+        .toList();
 
     return Redeem(
       id: json['id']?.toString() ?? '', // ✅ UUID STRING
@@ -71,6 +79,7 @@ class Redeem {
       operatorName: operator['fullName'] ?? '-',
       station: station['stationName'] ?? '-',
       lastRedeem: remainingQuota <= 0,
+      passengers: passengers,
     );
   }
 }

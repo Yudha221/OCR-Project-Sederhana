@@ -67,21 +67,29 @@ class VoucherRepository {
     required String name,
     required String nik,
   }) async {
-    final response = await dio.post(
-      '/redeem',
-      data: {
-        'serialNumber': serial,
-        'product': 'VOUCHER',
-        'name': name,
-        'identityNumber': nik,
-        'notes': '',
-      },
-    );
+    try {
+      final response = await dio.post(
+        '/redeem',
+        data: {
+          'serialNumber': serial,
+          'redeemType': 'SINGLE',
+          'product': 'VOUCHER',
+          'passengerName': name,
+          'passengerNik': nik,
+          'notes': '',
+        },
+      );
 
-    return {
-      'success': response.statusCode == 200 || response.statusCode == 201,
-      'message': response.data['message'],
-    };
+      return {
+        'success': response.statusCode == 200 || response.statusCode == 201,
+        'message': response.data['message'],
+      };
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? 'Redeem gagal',
+      };
+    }
   }
 
   // =====================

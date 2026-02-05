@@ -677,31 +677,28 @@ class _HomePageState extends State<HomePage> {
                     await _loadRedeem();
 
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          result['message'] ?? 'Data berhasil dihapus',
-                        ),
-                      ),
+                    _showInfoDialog(
+                      title: 'Berhasil',
+                      message: result['message'] ?? 'Data berhasil dihapus',
+                      icon: Icons.check_circle_outline,
+                      color: Colors.green,
                     );
                   } else {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          result['message'] ?? 'Gagal menghapus data',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
+                    _showInfoDialog(
+                      title: 'Gagal',
+                      message: result['message'] ?? 'Gagal menghapus data',
+                      icon: Icons.error_outline,
+                      color: Colors.red,
                     );
                   }
                 } catch (e) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Terjadi kesalahan'),
-                      backgroundColor: Colors.red,
-                    ),
+                  _showInfoDialog(
+                    title: 'Error',
+                    message: 'Terjadi kesalahan saat memproses data.',
+                    icon: Icons.error_outline,
+                    color: Colors.red,
                   );
                 } finally {
                   if (mounted) {
@@ -711,6 +708,50 @@ class _HomePageState extends State<HomePage> {
               }
             },
             child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= DIALOG HELPER (HOME PAGE)
+  void _showInfoDialog({
+    required String title,
+    required String message,
+    IconData icon = Icons.info_outline,
+    Color color = Colors.blue,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: Colors.white)),
+            ),
           ),
         ],
       ),

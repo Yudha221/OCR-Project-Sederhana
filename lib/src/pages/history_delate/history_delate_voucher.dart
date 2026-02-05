@@ -107,8 +107,10 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                           ),
                           columns: const [
                             DataColumn(label: Text('Tanggal Dihapus')),
+                            DataColumn(label: Text('Nama PIC')),
+                            DataColumn(label: Text('NIK PIC')),
                             DataColumn(label: Text('Nama Pelanggan')),
-                            DataColumn(label: Text('NIK')),
+                            DataColumn(label: Text('NIK Pelanggan')),
                             DataColumn(label: Text('Nomor Transaksi')),
                             DataColumn(label: Text('Serial Voucher')),
                             DataColumn(label: Text('Kategori')),
@@ -136,6 +138,30 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
 
                                 // NIK
                                 DataCell(Text(e.identityNumber)),
+
+                                // Nama Pelanggan
+                                DataCell(
+                                  Text(
+                                    e.passengers.isNotEmpty &&
+                                            e.passengers.first.passengerName
+                                                .trim()
+                                                .isNotEmpty
+                                        ? e.passengers.first.passengerName
+                                        : '-',
+                                  ),
+                                ),
+
+                                // NIK Pelanggan
+                                DataCell(
+                                  Text(
+                                    e.passengers.isNotEmpty &&
+                                            e.passengers.first.nik
+                                                .trim()
+                                                .isNotEmpty
+                                        ? e.passengers.first.nik
+                                        : '-',
+                                  ),
+                                ),
 
                                 // Nomor Transaksi
                                 DataCell(Text(e.transactionNumber)),

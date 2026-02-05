@@ -4,6 +4,7 @@ import 'package:ocr_project/src/controllers/redeem_controller.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ocr_project/src/controllers/last_redeem_controller.dart';
+import 'package:ocr_project/src/pages/redeem/redeem_voucher_page.dart';
 
 class RedeemPage extends StatefulWidget {
   const RedeemPage({super.key});
@@ -147,9 +148,12 @@ class _RedeemPageState extends State<RedeemPage> {
     final serial = _serialController.text.trim();
 
     if (serial.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Serial number kosong')));
+      _showInfoDialog(
+        title: 'Serial Kosong',
+        message: 'Silakan masukkan atau scan serial number terlebih dahulu.',
+        icon: Icons.warning_amber_rounded,
+        color: Colors.orange,
+      );
       return;
     }
 
@@ -163,7 +167,15 @@ class _RedeemPageState extends State<RedeemPage> {
       }
 
       final data = response['data'];
+      final productType = _redeemController.detectProductType(data);
 
+      // 🚨 JIKA DIA VOUCHER
+      if (productType == ProductType.voucher) {
+        _showWrongProgramDialog();
+        return;
+      }
+
+      // ✅ HANYA FWC BOLEH LEWAT
       setState(() {
         _isVerified = true;
         ownerName = data['customerName']?.toString() ?? '-';
@@ -174,30 +186,69 @@ class _RedeemPageState extends State<RedeemPage> {
             int.tryParse(data['quotaRemaining']?.toString() ?? '0') ?? 0;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Serial berhasil diverifikasi')),
+      _showInfoDialog(
+        title: 'Verifikasi Berhasil',
+        message: 'Serial FWC berhasil diverifikasi.',
+        icon: Icons.check_circle_outline,
+        color: Colors.green,
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Verifikasi gagal: $e')));
+      _showInfoDialog(
+        title: 'Verifikasi Gagal',
+        message: e.toString(),
+        icon: Icons.error_outline,
+        color: Colors.red,
+      );
     } finally {
       setState(() => _isVerifying = false);
     }
   }
 
+  void _showWrongProgramDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Serial Tidak Sesuai'),
+        content: const Text(
+          'Serial yang dimasukkan adalah Voucher.\n'
+          'Silakan lakukan redeem melalui menu Voucher.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // tutup dialog
+              Navigator.pop(context); // keluar page FWC
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RedeemVoucherPage()),
+              );
+            },
+            child: const Text('Ke Redeem Voucher'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ================= REDEEM (POST API) ✅ TAMBAHAN
   Future<void> _redeem() async {
     if (!_isVerified) return;
+
     final beforeRedeemQuota = remainingQuota;
 
     if (remainingQuota < _requiredQuota) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Kuota tidak cukup. Butuh $_requiredQuota, sisa $remainingQuota',
-          ),
-        ),
+      _showInfoDialog(
+        title: 'Kuota Tidak Cukup',
+        message:
+            'Kuota tidak mencukupi.\n'
+            'Dibutuhkan: $_requiredQuota\n'
+            'Sisa: $remainingQuota',
+        icon: Icons.error_outline,
+        color: Colors.red,
       );
       return;
     }
@@ -209,28 +260,90 @@ class _RedeemPageState extends State<RedeemPage> {
         serialNumber: _serialController.text.trim(),
         redeemType: _redeemType,
       );
-      // ✅ HITUNG SENDIRI (JANGAN PAKAI RESPONSE)
+
+      // 🔥 SOFTKODE DITARO DI SINI (WAJIB)
+      if (response['success'] != true) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              title: Row(
+                children: const [
+                  Icon(
+                    Icons.confirmation_number_outlined,
+                    color: Colors.red,
+                    size: 28,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Serial Voucher',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                response['message'] ??
+                    'Voucher ini sudah digunakan atau sudah tidak berlaku.',
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Mengerti',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+
+      // ✅ LANJUT NORMAL (PASTI FWC)
       final afterRedeemQuota = beforeRedeemQuota - _requiredQuota;
 
       setState(() {
         remainingQuota = afterRedeemQuota;
       });
 
-      // ✅ KAMERA CUMA KALAU HABIS
       if (afterRedeemQuota == 0) {
         final lastRedeemId = response['data']['transactionNumber'];
         await _openLastRedeemCamera(lastRedeemId);
         return;
       }
-      if (response['success'] != true) {
-        throw Exception(response['message']);
-      }
 
       _showRedeemSuccessDialog();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Redeem gagal: $e')));
+      _showInfoDialog(
+        title: 'Redeem Gagal',
+        message: e.toString(),
+        icon: Icons.error_outline,
+        color: Colors.red,
+      );
     } finally {
       setState(() => _isRedeeming = false);
     }
@@ -475,6 +588,49 @@ class _RedeemPageState extends State<RedeemPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showInfoDialog({
+    required String title,
+    required String message,
+    IconData icon = Icons.info_outline,
+    Color color = Colors.blue,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ],
       ),
     );
   }
