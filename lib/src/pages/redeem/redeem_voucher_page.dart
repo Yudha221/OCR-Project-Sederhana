@@ -121,6 +121,75 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
         throw Exception(res['message'] ?? 'Voucher tidak ditemukan');
       }
 
+      final data = res['data'];
+      final productType = _controller.detectProductType(data);
+
+      // ❌ JIKA FWC MASUK VOUCHER PAGE → TOLAK
+      if (productType == ProductType.fwc) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              title: Row(
+                children: const [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                    size: 28,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Serial Tidak Sesuai',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: const Text(
+                'Serial yang Anda masukkan adalah FWC.\n\n'
+                'Voucher tidak dapat digunakan untuk jenis kartu ini. '
+                'Silakan lakukan proses redeem melalui menu FWC.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+              actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Mengerti',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+
       setState(() {
         _isSerialVerified = true;
         _cardData = res['data']; // 🔥 SIMPAN DATA CARD

@@ -1,6 +1,8 @@
 import '../models/redeem.dart';
 import '../repositories/voucher_repository.dart';
 
+enum ProductType { voucher, fwc }
+
 class VoucherRedeemController {
   final VoucherRepository _repo = VoucherRepository();
 
@@ -29,6 +31,15 @@ class VoucherRedeemController {
   // =====================
   Future<Map<String, dynamic>> verifySerial(String serialNumber) {
     return _repo.verifySerial(serialNumber);
+  }
+
+  ProductType detectProductType(Map<String, dynamic> data) {
+    final totalQuota = data['cardProduct']?['totalQuota'];
+
+    if (totalQuota == 1) return ProductType.voucher;
+    if (totalQuota > 1) return ProductType.fwc;
+
+    throw Exception('Invalid product data');
   }
 
   // =====================

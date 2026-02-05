@@ -3,6 +3,7 @@ import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/voucher_controller.dart';
 import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_voucher_page.dart';
+import 'package:ocr_project/src/utils/dialog_utils.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 
 class HomePageVoucher extends StatefulWidget {
@@ -50,6 +51,15 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   Future<void> _loadUserName() async {
     final name = await _authController.getUserName();
     setState(() => userName = name);
+  }
+
+  Future<DateTime?> _pickDate(DateTime? initial) {
+    return showDatePicker(
+      context: context,
+      initialDate: initial ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
   }
 
   Future<void> _loadVoucher() async {
@@ -233,13 +243,56 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // ================= FILTER =================
   Widget _filterSection() {
+    final isFilterActive =
+        selectedCategory != null ||
+        selectedCardType != null ||
+        startDate != null ||
+        endDate != null;
+
     return Card(
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ===== HEADER =====
+            Row(
+              children: [
+                const Icon(Icons.filter_alt_outlined, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filter Data',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                if (isFilterActive)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Filter Aktif',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // ===== DROPDOWN =====
             GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -247,11 +300,11 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 3.2,
+                childAspectRatio: 3.4,
               ),
               children: [
                 _dropdown(
-                  label: 'Category',
+                  label: 'Kategori Voucher',
                   value: selectedCategory,
                   items: const ['Paid', 'Unpaid'],
                   onChanged: (v) {
@@ -261,7 +314,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                   },
                 ),
                 _dropdown(
-                  label: 'Type',
+                  label: 'Tipe Voucher',
                   value: selectedCardType,
                   items: const ['Ekonomi Premium'],
                   onChanged: (v) {
@@ -272,14 +325,54 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                onPressed: _resetFilter,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reset Filter'),
-              ),
+
+            // ===== DATE RANGE =====
+            Row(
+              children: [
+                Expanded(
+                  child: _datePicker(
+                    label: 'Tanggal Mulai',
+                    value: startDate,
+                    onTap: () async {
+                      final date = await _pickDate(startDate);
+                      if (date != null) {
+                        startDate = date;
+                        currentPage = 1;
+                        setState(_applyFilterAndPagination);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _datePicker(
+                    label: 'Tanggal Akhir',
+                    value: endDate,
+                    onTap: () async {
+                      final date = await _pickDate(endDate);
+                      if (date != null) {
+                        endDate = date;
+                        currentPage = 1;
+                        setState(_applyFilterAndPagination);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // ===== ACTION BUTTON =====
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _resetFilter,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reset'),
+                ),
+              ],
             ),
           ],
         ),
@@ -501,13 +594,16 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                         style: TextStyle(color: Colors.red),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
+                        side: const BorderSide(
+                          color: Colors.red, // 👈 warna border
+                          width: 1.5, // 👈 tebal border
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8), // 👈 radius
+                        ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
@@ -558,49 +654,86 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   }) {
     return DropdownButtonFormField<String>(
       value: value,
+      hint: Text('Semua $label'),
+      isExpanded: true,
       items: items
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
       onChanged: onChanged,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        suffixIcon: value != null
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () => onChanged(null),
+              )
+            : null,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
   }
 
   void _confirmDelete(String id) {
-    final ctrl = TextEditingController();
+    DialogUtils.confirmDeleteFancy(
+      context,
+      title: 'Hapus Voucher',
+      description:
+          'Yakin ingin menghapus voucher ini?\nAksi ini membutuhkan alasan penghapusan.',
+      onConfirm: (note) async {
+        setState(() => isLoading = true);
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hapus Voucher'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(labelText: 'Alasan'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _redeemController.deleteVoucher(
-                id: id,
-                note: ctrl.text,
-                deletedBy: userName,
-              );
-              await _loadVoucher();
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+        final res = await _redeemController.deleteVoucher(
+          id: id,
+          note: note,
+          deletedBy: userName,
+        );
+
+        await _loadVoucher();
+
+        if (!mounted) return;
+
+        DialogUtils.showInfo(
+          context,
+          title: res['success'] == true ? 'Berhasil' : 'Gagal',
+          message: res['message'],
+          icon: res['success'] == true
+              ? Icons.check_circle_outline
+              : Icons.error_outline,
+          color: res['success'] == true ? Colors.green : Colors.red,
+        );
+
+        setState(() => isLoading = false);
+      },
     );
   }
 
   String formatJourney(String value) {
     if (value == 'ROUNDTRIP') return 'Round Trip';
     return 'Single Journey';
+  }
+
+  Widget _datePicker({
+    required String label,
+    required DateTime? value,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          isDense: true,
+        ),
+        child: Text(
+          value == null
+              ? 'mm/dd/yyy'
+              : '${value.day}/${value.month}/${value.year}',
+          style: const TextStyle(fontSize: 14),
+        ),
+      ),
+    );
   }
 }

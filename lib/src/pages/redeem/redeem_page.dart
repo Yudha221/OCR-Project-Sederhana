@@ -4,7 +4,6 @@ import 'package:ocr_project/src/controllers/redeem_controller.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ocr_project/src/controllers/last_redeem_controller.dart';
-import 'package:ocr_project/src/pages/redeem/redeem_voucher_page.dart';
 
 class RedeemPage extends StatefulWidget {
   const RedeemPage({super.key});
@@ -207,30 +206,61 @@ class _RedeemPageState extends State<RedeemPage> {
   void _showWrongProgramDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Serial Tidak Sesuai'),
-        content: const Text(
-          'Serial yang dimasukkan adalah Voucher.\n'
-          'Silakan lakukan redeem melalui menu Voucher.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // tutup dialog
-              Navigator.pop(context); // keluar page FWC
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RedeemVoucherPage()),
-              );
-            },
-            child: const Text('Ke Redeem Voucher'),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          title: Row(
+            children: const [
+              Icon(
+                Icons.confirmation_number_outlined,
+                color: Colors.orange,
+                size: 28,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Serial Tidak Sesuai',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+          content: const Text(
+            'Serial yang Anda masukkan adalah Voucher.\n\n'
+            'Jenis kartu ini tidak dapat diredeem melalui menu FWC. '
+            'Silakan lakukan redeem melalui menu Voucher.',
+            style: TextStyle(fontSize: 14, height: 1.4),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Mengerti',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
