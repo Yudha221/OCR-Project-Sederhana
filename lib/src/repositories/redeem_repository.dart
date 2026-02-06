@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:ocr_project/src/models/card_category.dart';
 import 'package:ocr_project/src/models/card_type.dart';
+import 'package:ocr_project/src/models/station.dart';
 import '../presentation/api.dart';
 import '../models/redeem.dart';
 
@@ -162,5 +163,16 @@ class RedeemRepository {
 
     final List data = response.data['data'];
     return data.map((e) => CardType.fromJson(e)).toList();
+  }
+
+  // =====================
+  // GET STATIONS
+  // =====================
+  Future<List<Station>> getStations() async {
+    final response = await dio.get('/station');
+
+    final List items = response.data['data']['items'];
+
+    return items.map((e) => Station.fromJson(e)).toList();
   }
 }

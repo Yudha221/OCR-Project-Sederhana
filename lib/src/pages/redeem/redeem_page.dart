@@ -565,15 +565,17 @@ class _RedeemPageState extends State<RedeemPage> {
                         ),
                         const Divider(height: 24),
 
-                        Text('Nama: $ownerName'),
+                        Text('Nama Pelanggan: $ownerName'),
                         const SizedBox(height: 6),
                         Text('NIK: $ownerNik'),
                         const SizedBox(height: 6),
-                        Text('Serial: ${_serialController.text}'),
+                        Text('No. Seri: ${_serialController.text}'),
                         const SizedBox(height: 6),
-                        Text('Card Category: $cardCategory'),
+                        Text('Category: $cardCategory'),
                         const SizedBox(height: 6),
-                        Text('Card Type: $cardType'),
+                        Text('Type: $cardType'),
+                        const SizedBox(height: 6),
+                        Text('Kuota Terpakai: $_requiredQuota'),
 
                         const SizedBox(height: 12),
 

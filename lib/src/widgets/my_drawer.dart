@@ -107,6 +107,19 @@ class MyDrawer extends StatelessWidget {
             );
           },
         ),
+        MyDrawerTile(
+          text: 'History Delete FWCKAI',
+          icon: Icons.delete_sweep,
+          onTap: () {
+            Navigator.pop(context); // nutup drawer
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HistoryDeletePage(),
+              ),
+            );
+          },
+        ),
       ],
     );
   }

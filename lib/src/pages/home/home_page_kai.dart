@@ -11,10 +11,10 @@ class HomePageKai extends StatefulWidget {
   const HomePageKai({super.key});
 
   @override
-  State<HomePageKai> createState() => _HomePageKaiState();
+  State<HomePageKai> createState() => _HomePageState();
 }
 
-class _HomePageKaiState extends State<HomePageKai> {
+class _HomePageState extends State<HomePageKai> {
   final AuthController _authController = AuthController();
   final RedeemController _redeemController = RedeemController();
 
@@ -23,6 +23,13 @@ class _HomePageKaiState extends State<HomePageKai> {
 
   // loading
   bool isLoading = false;
+  List<String> categoryItems = [];
+  bool isCategoryLoading = false;
+  List<String> cardTypeItems = [];
+  bool isCardTypeLoading = false;
+  List<String> stationItems = [];
+  bool isStationLoading = false;
+  String? selectedStation;
 
   // search & filter
   final TextEditingController _searchController = TextEditingController();
@@ -46,6 +53,42 @@ class _HomePageKaiState extends State<HomePageKai> {
     super.initState();
     _loadUserName();
     _loadRedeem();
+    _loadCategories();
+    _loadCardTypes();
+    _loadStations();
+  }
+
+  Future<void> _loadStations() async {
+    setState(() => isStationLoading = true);
+
+    final items = await _redeemController.fetchStationNames();
+
+    setState(() {
+      stationItems = items;
+      isStationLoading = false;
+    });
+  }
+
+  Future<void> _loadCardTypes() async {
+    setState(() => isCardTypeLoading = true);
+
+    final items = await _redeemController.fetchFWCCardTypes();
+
+    setState(() {
+      cardTypeItems = items;
+      isCardTypeLoading = false;
+    });
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() => isCategoryLoading = true);
+
+    final items = await _redeemController.fetchFWCCategoryNames();
+
+    setState(() {
+      categoryItems = items;
+      isCategoryLoading = false;
+    });
   }
 
   Future<void> _loadUserName() async {
@@ -80,6 +123,9 @@ class _HomePageKaiState extends State<HomePageKai> {
       final matchType =
           selectedCardType == null || e.cardType == selectedCardType;
 
+      final matchStation =
+          selectedStation == null || e.station == selectedStation;
+
       bool matchDate = true;
       final redeemDate = DateTime.tryParse(e.redeemDate);
 
@@ -92,7 +138,11 @@ class _HomePageKaiState extends State<HomePageKai> {
         matchDate = redeemDate.isBefore(endDate!.add(const Duration(days: 1)));
       }
 
-      return matchSearch && matchCategory && matchType && matchDate;
+      return matchSearch &&
+          matchCategory &&
+          matchType &&
+          matchStation &&
+          matchDate;
     }).toList();
 
     final start = (currentPage - 1) * rowsPerPage;
@@ -113,6 +163,7 @@ class _HomePageKaiState extends State<HomePageKai> {
       selectedCardType = null;
       startDate = null;
       endDate = null;
+      selectedStation = null;
       currentPage = 1;
       _applyFilterAndPagination();
     });
@@ -168,7 +219,7 @@ class _HomePageKaiState extends State<HomePageKai> {
       children: [
         const Expanded(
           child: Text(
-            'Redeem Kuota FWCKAI',
+            'Redeem Kuota FWC',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
@@ -254,7 +305,7 @@ class _HomePageKaiState extends State<HomePageKai> {
                 _dropdown(
                   label: 'Card Category',
                   value: selectedCategory,
-                  items: const ['Gold', 'Silver', 'KAI'],
+                  items: categoryItems,
                   onChanged: (v) {
                     selectedCategory = v;
                     currentPage = 1;
@@ -264,9 +315,19 @@ class _HomePageKaiState extends State<HomePageKai> {
                 _dropdown(
                   label: 'Card Type',
                   value: selectedCardType,
-                  items: const ['JaBan', 'JaKa', 'Kaban'],
+                  items: cardTypeItems,
                   onChanged: (v) {
                     selectedCardType = v;
+                    currentPage = 1;
+                    setState(_applyFilterAndPagination);
+                  },
+                ),
+                _dropdown(
+                  label: 'Stasiun',
+                  value: selectedStation,
+                  items: stationItems,
+                  onChanged: (v) {
+                    selectedStation = v;
                     currentPage = 1;
                     setState(_applyFilterAndPagination);
                   },

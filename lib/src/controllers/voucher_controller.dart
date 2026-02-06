@@ -1,3 +1,5 @@
+import 'package:ocr_project/src/models/station.dart';
+
 import '../models/redeem.dart';
 import '../repositories/voucher_repository.dart';
 
@@ -65,6 +67,34 @@ class VoucherRedeemController {
   }
 
   // =====================
-  // GET CARD CATEGORIES (VOUCHER ONLY)
+  // GET VOUCHER CATEGORY NAMES
   // =====================
+  Future<List<String>> fetchVoucherCategoryNames() async {
+    final categories = await _repo.getVoucherCategories();
+
+    // 🔥 ambil categoryName saja
+    return categories.map((e) => e.categoryName).toList();
+  }
+
+  // =====================
+  // GET VOUCHER TYPE NAMES
+  // =====================
+  Future<List<String>> fetchVoucherTypeNames() async {
+    final types = await _repo.getVoucherCardTypes();
+
+    // 🔥 ambil typeName saja
+    return types.map((e) => e.typeName).toList();
+  }
+
+  // =====================
+  // GET STATION NAMES
+  // =====================
+  Future<List<String>> fetchStationNames() async {
+    final List<Station> stations = await _repo.getStations();
+
+    return stations
+        .map((e) => e.stationName)
+        .toSet() // 🚨 hindari duplikat
+        .toList();
+  }
 }

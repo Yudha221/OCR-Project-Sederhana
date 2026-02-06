@@ -23,12 +23,19 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // loading
   bool isLoading = false;
+  List<String> voucherCategoryItems = [];
+  bool isVoucherCategoryLoading = false;
+  List<String> voucherTypeItems = [];
+  bool isVoucherTypeLoading = false;
+  List<String> stationItems = [];
+  bool isStationLoading = false;
 
   // search & filter
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
   String? selectedCategory;
   String? selectedCardType;
+  String? selectedStation;
   DateTime? startDate;
   DateTime? endDate;
 
@@ -46,6 +53,42 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     super.initState();
     _loadUserName();
     _loadVoucher();
+    _loadVoucherCategories();
+    _loadVoucherTypes();
+    _loadStations();
+  }
+
+  Future<void> _loadStations() async {
+    setState(() => isStationLoading = true);
+
+    final items = await _redeemController.fetchStationNames();
+
+    setState(() {
+      stationItems = items;
+      isStationLoading = false;
+    });
+  }
+
+  Future<void> _loadVoucherTypes() async {
+    setState(() => isVoucherTypeLoading = true);
+
+    final items = await _redeemController.fetchVoucherTypeNames();
+
+    setState(() {
+      voucherTypeItems = items;
+      isVoucherTypeLoading = false;
+    });
+  }
+
+  Future<void> _loadVoucherCategories() async {
+    setState(() => isVoucherCategoryLoading = true);
+
+    final items = await _redeemController.fetchVoucherCategoryNames();
+
+    setState(() {
+      voucherCategoryItems = items;
+      isVoucherCategoryLoading = false;
+    });
   }
 
   Future<void> _loadUserName() async {
@@ -89,6 +132,9 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
       final matchType =
           selectedCardType == null || e.cardType == selectedCardType;
 
+      final matchStation =
+          selectedStation == null || e.station == selectedStation;
+
       bool matchDate = true;
       final redeemDate = DateTime.tryParse(e.redeemDate);
 
@@ -101,7 +147,11 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
         matchDate = redeemDate.isBefore(endDate!.add(const Duration(days: 1)));
       }
 
-      return matchSearch && matchCategory && matchType && matchDate;
+      return matchSearch &&
+          matchCategory &&
+          matchType &&
+          matchStation &&
+          matchDate;
     }).toList();
 
     final start = (currentPage - 1) * rowsPerPage;
@@ -291,41 +341,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
             ),
 
             const SizedBox(height: 16),
-
-            // ===== DROPDOWN =====
-            GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 3.4,
-              ),
-              children: [
-                _dropdown(
-                  label: 'Kategori Voucher',
-                  value: selectedCategory,
-                  items: const ['Paid', 'Unpaid'],
-                  onChanged: (v) {
-                    selectedCategory = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _dropdown(
-                  label: 'Tipe Voucher',
-                  value: selectedCardType,
-                  items: const ['Ekonomi Premium'],
-                  onChanged: (v) {
-                    selectedCardType = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-              ],
-            ),
-
             // ===== DATE RANGE =====
             Row(
               children: [
@@ -360,8 +375,50 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                 ),
               ],
             ),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            // ===== DROPDOWN =====
+            GridView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 3.4,
+              ),
+              children: [
+                _dropdown(
+                  label: 'Kategori Voucher',
+                  value: selectedCategory,
+                  items: voucherCategoryItems,
+                  onChanged: (v) {
+                    selectedCategory = v;
+                    currentPage = 1;
+                    setState(_applyFilterAndPagination);
+                  },
+                ),
+                _dropdown(
+                  label: 'Tipe Voucher',
+                  value: selectedCardType,
+                  items: voucherTypeItems,
+                  onChanged: (v) {
+                    selectedCardType = v;
+                    currentPage = 1;
+                    setState(_applyFilterAndPagination);
+                  },
+                ),
+                _dropdown(
+                  label: 'Stasiun',
+                  value: selectedStation,
+                  items: stationItems,
+                  onChanged: (v) {
+                    selectedStation = v;
+                    currentPage = 1;
+                    setState(_applyFilterAndPagination);
+                  },
+                ),
+              ],
+            ),
 
             // ===== ACTION BUTTON =====
             Row(
