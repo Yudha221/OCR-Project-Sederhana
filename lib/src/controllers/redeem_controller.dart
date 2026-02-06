@@ -86,4 +86,18 @@ class RedeemController {
 
     return res;
   }
+
+  Future<List<String>> fetchFWCCategoryNames() async {
+    final categories = await _repo.getCardCategories();
+
+    // 🔥 ambil categoryName saja
+    return categories.map((e) => e.categoryName).toList();
+  }
+
+  Future<List<String>> fetchFWCCardTypes() async {
+    final types = await _repo.getCardTypes();
+
+    // 🔥 ambil typeName saja
+    return types.map((e) => e.typeName).toList();
+  }
 }

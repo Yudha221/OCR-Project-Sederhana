@@ -7,14 +7,14 @@ import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_page.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePageKai extends StatefulWidget {
+  const HomePageKai({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePageKai> createState() => _HomePageKaiState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageKaiState extends State<HomePageKai> {
   final AuthController _authController = AuthController();
   final RedeemController _redeemController = RedeemController();
 
@@ -23,10 +23,6 @@ class _HomePageState extends State<HomePage> {
 
   // loading
   bool isLoading = false;
-  List<String> categoryItems = [];
-  bool isCategoryLoading = false;
-  List<String> cardTypeItems = [];
-  bool isCardTypeLoading = false;
 
   // search & filter
   final TextEditingController _searchController = TextEditingController();
@@ -50,30 +46,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUserName();
     _loadRedeem();
-    _loadCategories();
-    _loadCardTypes();
-  }
-
-  Future<void> _loadCardTypes() async {
-    setState(() => isCardTypeLoading = true);
-
-    final items = await _redeemController.fetchFWCCardTypes();
-
-    setState(() {
-      cardTypeItems = items;
-      isCardTypeLoading = false;
-    });
-  }
-
-  Future<void> _loadCategories() async {
-    setState(() => isCategoryLoading = true);
-
-    final items = await _redeemController.fetchFWCCategoryNames();
-
-    setState(() {
-      categoryItems = items;
-      isCategoryLoading = false;
-    });
   }
 
   Future<void> _loadUserName() async {
@@ -196,7 +168,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         const Expanded(
           child: Text(
-            'Redeem Kuota FWC',
+            'Redeem Kuota FWCKAI',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
@@ -282,7 +254,7 @@ class _HomePageState extends State<HomePage> {
                 _dropdown(
                   label: 'Card Category',
                   value: selectedCategory,
-                  items: categoryItems,
+                  items: const ['Gold', 'Silver', 'KAI'],
                   onChanged: (v) {
                     selectedCategory = v;
                     currentPage = 1;
@@ -292,7 +264,7 @@ class _HomePageState extends State<HomePage> {
                 _dropdown(
                   label: 'Card Type',
                   value: selectedCardType,
-                  items: cardTypeItems,
+                  items: const ['JaBan', 'JaKa', 'Kaban'],
                   onChanged: (v) {
                     selectedCardType = v;
                     currentPage = 1;

@@ -63,4 +63,8 @@ class VoucherRedeemController {
   }) {
     return _repo.deleteVoucher(id: id, note: note, deletedBy: deletedBy);
   }
+
+  // =====================
+  // GET CARD CATEGORIES (VOUCHER ONLY)
+  // =====================
 }

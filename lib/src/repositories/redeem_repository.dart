@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:ocr_project/src/models/card_category.dart';
+import 'package:ocr_project/src/models/card_type.dart';
 import '../presentation/api.dart';
 import '../models/redeem.dart';
 
@@ -134,5 +136,31 @@ class RedeemRepository {
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
+  }
+
+  // =====================
+  // GET CARD CATEGORY (FWC)
+  // =====================
+  Future<List<CardCategory>> getCardCategories() async {
+    final response = await dio.get(
+      '/card/category',
+      queryParameters: {'programType': 'FWC'},
+    );
+
+    final List data = response.data['data'];
+    return data.map((e) => CardCategory.fromJson(e)).toList();
+  }
+
+  // =====================
+  // GET CARD TYPES (FWC)
+  // =====================
+  Future<List<CardType>> getCardTypes() async {
+    final response = await dio.get(
+      '/card/types',
+      queryParameters: {'programType': 'FWC'},
+    );
+
+    final List data = response.data['data'];
+    return data.map((e) => CardType.fromJson(e)).toList();
   }
 }

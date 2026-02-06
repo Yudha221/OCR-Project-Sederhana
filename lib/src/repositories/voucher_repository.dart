@@ -110,4 +110,12 @@ class VoucherRepository {
       'message': response.data['message'],
     };
   }
+
+  // =====================
+  // GET CARD CATEGORIES
+  // =====================
+
+  // =====================
+  // GET CARD TYPES
+  // =====================
 }

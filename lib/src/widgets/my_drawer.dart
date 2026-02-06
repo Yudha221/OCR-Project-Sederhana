@@ -4,6 +4,7 @@ import 'package:ocr_project/src/pages/auth/login_page.dart';
 import 'package:ocr_project/src/pages/history_delate/history_delate.dart';
 import 'package:ocr_project/src/pages/history_delate/history_delate_voucher.dart';
 import 'package:ocr_project/src/pages/home/home_page.dart';
+import 'package:ocr_project/src/pages/home/home_page_kai.dart';
 import 'package:ocr_project/src/pages/home/home_page_voucher.dart';
 import 'my_drawer_tile.dart';
 
@@ -55,6 +56,17 @@ class MyDrawer extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          },
+        ),
+        MyDrawerTile(
+          text: 'Redeem FWCKAI',
+          icon: Icons.train,
+          onTap: () {
+            Navigator.pop(context); // nutup drawer
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePageKai()),
             );
           },
         ),
