@@ -114,4 +114,13 @@ class RedeemController {
         .toSet() // 🚨 hindari duplikat
         .toList();
   }
+
+  int calculateUsedQuotaBySerial({
+    required List<Redeem> allData,
+    required String serialNumber,
+  }) {
+    return allData
+        .where((e) => e.serialNumber == serialNumber && !e.isDeleted)
+        .fold(0, (sum, e) => sum + e.usedQuota);
+  }
 }

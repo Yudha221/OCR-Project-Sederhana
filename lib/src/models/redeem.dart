@@ -13,6 +13,7 @@ class Redeem {
   final String programType; // ✅ NEW FIELD
   final int usedQuota;
   final int remainingQuota;
+  final bool isDeleted;
   final String note;
   final String operatorName;
   final String station;
@@ -32,6 +33,7 @@ class Redeem {
     required this.programType,
     required this.usedQuota,
     required this.remainingQuota,
+    required this.isDeleted,
     required this.note,
     required this.operatorName,
     required this.station,
@@ -76,6 +78,7 @@ class Redeem {
       note: json['notes']?.toString() ?? '-',
       usedQuota: quotaUsed,
       remainingQuota: remainingQuota,
+      isDeleted: json['isDeleted'] == true,
       operatorName: operator['fullName'] ?? '-',
       station: station['stationName'] ?? '-',
       lastRedeem: remainingQuota <= 0,

@@ -4,6 +4,7 @@ import 'package:ocr_project/src/controllers/redeem_controller.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:ocr_project/src/controllers/last_redeem_controller.dart';
+import 'package:ocr_project/src/utils/ui_helper.dart';
 
 class RedeemPage extends StatefulWidget {
   const RedeemPage({super.key});
@@ -15,6 +16,7 @@ class RedeemPage extends StatefulWidget {
 class _RedeemPageState extends State<RedeemPage> {
   final TextEditingController _serialController = TextEditingController();
   final RedeemController _redeemController = RedeemController();
+  String cardStatus = '';
 
   MobileScannerController? _scannerController;
 
@@ -33,6 +35,7 @@ class _RedeemPageState extends State<RedeemPage> {
   String ownerName = '';
   String ownerNik = '';
   int remainingQuota = 0;
+  int usedQuotaTotal = 0;
   String cardCategory = '';
   String cardType = '';
 
@@ -77,8 +80,10 @@ class _RedeemPageState extends State<RedeemPage> {
       ownerName = '';
       ownerNik = '';
       remainingQuota = 0;
+      usedQuotaTotal = 0;
       cardCategory = '';
       cardType = '';
+      cardStatus = '';
     });
   }
 
@@ -168,13 +173,12 @@ class _RedeemPageState extends State<RedeemPage> {
       final data = response['data'];
       final productType = _redeemController.detectProductType(data);
 
-      // 🚨 JIKA DIA VOUCHER
       if (productType == ProductType.voucher) {
         _showWrongProgramDialog();
         return;
       }
 
-      // ✅ HANYA FWC BOLEH LEWAT
+      // ✅ SET DATA KARTU
       setState(() {
         _isVerified = true;
         ownerName = data['customerName']?.toString() ?? '-';
@@ -183,6 +187,18 @@ class _RedeemPageState extends State<RedeemPage> {
         cardType = data['cardType']?.toString() ?? '-';
         remainingQuota =
             int.tryParse(data['quotaRemaining']?.toString() ?? '0') ?? 0;
+        cardStatus = data['statusActive']?.toString() ?? '-';
+      });
+
+      // ✅ HITUNG TOTAL KUOTA TERPAKAI (HISTORY)
+      final allRedeem = await _redeemController.fetchAllRedeem();
+      final usedQuota = _redeemController.calculateUsedQuotaBySerial(
+        allData: allRedeem,
+        serialNumber: serial,
+      );
+
+      setState(() {
+        usedQuotaTotal = usedQuota;
       });
 
       _showInfoDialog(
@@ -565,27 +581,28 @@ class _RedeemPageState extends State<RedeemPage> {
                         ),
                         const Divider(height: 24),
 
-                        Text('Nama Pelanggan: $ownerName'),
-                        const SizedBox(height: 6),
-                        Text('NIK: $ownerNik'),
-                        const SizedBox(height: 6),
-                        Text('No. Seri: ${_serialController.text}'),
-                        const SizedBox(height: 6),
-                        Text('Category: $cardCategory'),
-                        const SizedBox(height: 6),
-                        Text('Type: $cardType'),
-                        const SizedBox(height: 6),
-                        Text('Kuota Terpakai: $_requiredQuota'),
+                        rowText('Nama Pelanggan', ownerName),
+                        rowText('NIK', ownerNik),
+                        rowText('No. Seri', _serialController.text),
+                        rowText('Category', cardCategory),
+                        rowText('Type', cardType),
+                        rowText('Kuota Terpakai', usedQuotaTotal.toString()),
+                        rowText(
+                          'Status',
+                          cardStatus,
+                          valueColor: cardStatus == 'ACTIVE'
+                              ? Colors.green
+                              : Colors.red,
+                          isBold: true,
+                        ),
 
                         const SizedBox(height: 12),
 
-                        Text(
-                          'Sisa Kuota: $remainingQuota',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: _quotaColor(remainingQuota),
-                          ),
+                        rowText(
+                          'Sisa Kuota',
+                          remainingQuota.toString(),
+                          valueColor: _quotaColor(remainingQuota),
+                          isBold: true,
                         ),
                       ],
                     ),
