@@ -44,10 +44,6 @@ class _RedeemPageState extends State<RedeemPage> {
     return _redeemType == 1 ? 1 : 2;
   }
 
-  Color _quotaColor(int quota) {
-    return quota <= 1 ? Colors.red : Colors.black;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -175,6 +171,21 @@ class _RedeemPageState extends State<RedeemPage> {
 
       if (productType == ProductType.voucher) {
         _showWrongProgramDialog();
+        return;
+      }
+
+      final quotaRemaining =
+          int.tryParse(data['quotaRemaining']?.toString() ?? '0') ?? 0;
+
+      if (quotaRemaining <= 0) {
+        _showInfoDialog(
+          title: 'Kuota Habis',
+          message:
+              'Kuota kartu ini sudah habis.\n'
+              'Redeem tidak dapat dilakukan.',
+          icon: Icons.block,
+          color: Colors.red,
+        );
         return;
       }
 
@@ -601,7 +612,12 @@ class _RedeemPageState extends State<RedeemPage> {
                         rowText(
                           'Sisa Kuota',
                           remainingQuota.toString(),
-                          valueColor: _quotaColor(remainingQuota),
+                          labelColor: remainingQuota < 3
+                              ? Colors.red
+                              : Colors.black,
+                          valueColor: remainingQuota < 3
+                              ? Colors.red
+                              : Colors.black,
                           isBold: true,
                         ),
                       ],

@@ -10,8 +10,10 @@ class DialogUtils {
     required String description,
     required Future<void> Function(String note) onConfirm,
   }) {
-    final TextEditingController noteController = TextEditingController();
+    final noteController = TextEditingController();
+    final bookingController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    String? selectedReason;
 
     return showDialog(
       context: context,
@@ -25,31 +27,88 @@ class DialogUtils {
             Text('Hapus Data', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(description),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: noteController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Alasan Hapus',
-                  hintText: 'Contoh: Salah input data',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Alasan wajib diisi';
-                  }
-                  return null;
-                },
+        content: StatefulBuilder(
+          builder: (context, setModalState) {
+            return Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(description),
+                  const SizedBox(height: 16),
+
+                  /// DROPDOWN ALASAN
+                  DropdownButtonFormField<String>(
+                    value: selectedReason,
+                    decoration: const InputDecoration(
+                      labelText: 'Alasan Penghapusan',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Salah input nomor seri kartu',
+                        child: Text('Salah input nomor seri kartu'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Pembatalan Kereta',
+                        child: Text('Pembatalan Kereta'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Lainnya',
+                        child: Text('Lainnya'),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      setModalState(() {
+                        selectedReason = v;
+                        noteController.clear();
+                        bookingController.clear();
+                      });
+                    },
+                    validator: (v) => v == null ? 'Alasan wajib dipilih' : null,
+                  ),
+
+                  /// INPUT PEMBATALAN KERETA
+                  if (selectedReason == 'Pembatalan Kereta') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: bookingController,
+                      decoration: const InputDecoration(
+                        labelText: 'Kode Booking Kereta',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Kode booking wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+
+                  /// INPUT LAINNYA
+                  if (selectedReason == 'Lainnya') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: noteController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Alasan Lainnya',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Alasan wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -66,11 +125,20 @@ class DialogUtils {
                 ),
               ),
               onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  final note = noteController.text.trim();
-                  Navigator.pop(context);
-                  await onConfirm(note);
+                if (!formKey.currentState!.validate()) return;
+
+                late final String note;
+
+                if (selectedReason == 'Pembatalan Kereta') {
+                  note = bookingController.text.trim();
+                } else if (selectedReason == 'Lainnya') {
+                  note = noteController.text.trim();
+                } else {
+                  note = selectedReason!;
                 }
+
+                Navigator.pop(context);
+                await onConfirm(note);
               },
               child: const Text('Hapus', style: TextStyle(color: Colors.white)),
             ),

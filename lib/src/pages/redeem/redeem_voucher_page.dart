@@ -124,6 +124,51 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
       final data = res['data'];
       final productType = _controller.detectProductType(data);
 
+      final int quotaRemaining = data['quotaRemaining'] ?? 0;
+
+      // ❌ JIKA KUOTA HABIS → TOLAK LANGSUNG
+      if (quotaRemaining <= 0) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: const [
+                Icon(Icons.block, color: Colors.red, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Kuota Habis',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Voucher ini sudah tidak memiliki kuota.\n\n'
+              'Redeem tidak dapat dilanjutkan.',
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Mengerti',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        return; // 🔒 STOP PROSES VERIFY
+      }
+
       // ❌ JIKA FWC MASUK VOUCHER PAGE → TOLAK
       if (productType == ProductType.fwc) {
         showDialog(

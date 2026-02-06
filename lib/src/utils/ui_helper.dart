@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 Widget rowText(
   String label,
   String value, {
+  Color? labelColor, // 👈 TAMBAHAN
   Color? valueColor,
   bool isBold = false,
 }) {
@@ -12,10 +13,13 @@ Widget rowText(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 130, // 👉 bikin titik dua sejajar
+          width: 130,
           child: Text(
             '$label:',
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: labelColor ?? Colors.black, // 👈 LABEL COLOR
+            ),
           ),
         ),
         Expanded(

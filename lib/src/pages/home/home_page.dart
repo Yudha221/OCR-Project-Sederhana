@@ -5,6 +5,7 @@ import 'package:ocr_project/src/models/last_redeem.dart';
 import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_page.dart';
+import 'package:ocr_project/src/utils/date_helper.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 
 class HomePage extends StatefulWidget {
@@ -441,7 +442,7 @@ class _HomePageState extends State<HomePage> {
             rows: tableData.map((e) {
               return DataRow(
                 cells: [
-                  DataCell(Text(e.redeemDate)),
+                  DataCell(Text(formatRedeemDate(e.redeemDate))),
                   DataCell(Text(e.customerName)),
                   DataCell(Text(e.identityNumber)),
                   DataCell(Text(e.transactionNumber)),
@@ -681,90 +682,145 @@ class _HomePageState extends State<HomePage> {
 
   void _confirmDelete(String id) {
     final TextEditingController noteController = TextEditingController();
+    final TextEditingController bookingController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    String? selectedReason;
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Hapus Data'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Yakin ingin menghapus data ini? Aksi ini memerlukan alasan penghapusan.',
+        content: StatefulBuilder(
+          builder: (context, setModalState) {
+            return Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Yakin ingin menghapus data ini? Aksi ini memerlukan alasan penghapusan.',
+                  ),
+                  const SizedBox(height: 16),
+
+                  /// 🔽 DROPDOWN ALASAN
+                  DropdownButtonFormField<String>(
+                    value: selectedReason,
+                    decoration: const InputDecoration(
+                      labelText: 'Alasan Penghapusan',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Salah input nomor seri kartu',
+                        child: Text('Salah input nomor seri kartu'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Pembatalan Kereta',
+                        child: Text('Pembatalan Kereta'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Lainnya',
+                        child: Text('Lainnya'),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      setModalState(() {
+                        selectedReason = v;
+                        noteController.clear();
+                        bookingController.clear();
+                      });
+                    },
+                    validator: (v) => v == null ? 'Alasan wajib dipilih' : null,
+                  ),
+
+                  /// ✍️ INPUT UNTUK PEMBATALAN KERETA
+                  if (selectedReason == 'Pembatalan Kereta') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: bookingController,
+                      decoration: const InputDecoration(
+                        labelText: 'Kode Booking Kereta',
+                        hintText: 'Masukkan kode booking',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Kode booking wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+
+                  /// ✍️ INPUT UNTUK LAINNYA
+                  if (selectedReason == 'Lainnya') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Alasan Lainnya',
+                        hintText: 'Masukkan alasan penghapusan',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Alasan wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: 'Alasan Hapus',
-                  hintText: 'Contoh: Salah input data',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Alasan wajib diisi';
-                  }
-                  return null;
-                },
-                maxLines: 2,
-              ),
-            ],
-          ),
+            );
+          },
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
+
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                final note = noteController.text.trim();
-                Navigator.pop(context);
-                setState(() => isLoading = true);
+              if (!formKey.currentState!.validate()) return;
 
-                try {
-                  final result = await _redeemController.deleteRedeem(
-                    id: id,
-                    note: note,
-                    deletedBy: userName,
-                  );
+              late final String note;
 
-                  if (result['success'] == true) {
-                    await _loadRedeem();
+              if (selectedReason == 'Pembatalan Kereta') {
+                note = bookingController.text.trim();
+              } else if (selectedReason == 'Lainnya') {
+                note = noteController.text.trim();
+              } else {
+                note = selectedReason!;
+              }
 
-                    if (!mounted) return;
-                    _showInfoDialog(
-                      title: 'Berhasil',
-                      message: result['message'] ?? 'Data berhasil dihapus',
-                      icon: Icons.check_circle_outline,
-                      color: Colors.green,
-                    );
-                  } else {
-                    if (!mounted) return;
-                    _showInfoDialog(
-                      title: 'Gagal',
-                      message: result['message'] ?? 'Gagal menghapus data',
-                      icon: Icons.error_outline,
-                      color: Colors.red,
-                    );
-                  }
-                } catch (e) {
-                  if (!mounted) return;
-                  _showInfoDialog(
-                    title: 'Error',
-                    message: 'Terjadi kesalahan saat memproses data.',
-                    icon: Icons.error_outline,
-                    color: Colors.red,
-                  );
-                } finally {
-                  if (mounted) {
-                    setState(() => isLoading = false);
-                  }
+              Navigator.pop(context);
+              setState(() => isLoading = true);
+
+              try {
+                final result = await _redeemController.deleteRedeem(
+                  id: id,
+                  note: note,
+                  deletedBy: userName,
+                );
+
+                await _loadRedeem();
+
+                if (!mounted) return;
+                _showInfoDialog(
+                  title: result['success'] == true ? 'Berhasil' : 'Gagal',
+                  message: result['message'] ?? '',
+                  icon: result['success'] == true
+                      ? Icons.check_circle_outline
+                      : Icons.error_outline,
+                  color: result['success'] == true ? Colors.green : Colors.red,
+                );
+              } finally {
+                if (mounted) {
+                  setState(() => isLoading = false);
                 }
               }
             },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ocr_project/src/controllers/history_delete_controller.dart';
+import 'package:ocr_project/src/utils/date_helper.dart';
 
 class HistoryDeletePage extends StatefulWidget {
   const HistoryDeletePage({super.key});
@@ -87,6 +88,9 @@ class _HistoryDeletePageState extends State<HistoryDeletePage> {
                             Colors.red.shade50,
                           ),
                           columns: const [
+                            DataColumn(label: Text('Tanggal Dihapus')),
+                            DataColumn(label: Text('Nama Pelanggan')),
+                            DataColumn(label: Text('NIK')),
                             DataColumn(label: Text('Nomor Transaksi')),
                             DataColumn(label: Text('Serial Kartu')),
                             DataColumn(label: Text('Kategori')),
@@ -101,6 +105,24 @@ class _HistoryDeletePageState extends State<HistoryDeletePage> {
 
                             return DataRow(
                               cells: [
+                                // TANGGAL DIHAPUS
+                                DataCell(
+                                  Text(formatDeleteDate(e['updatedAt'])),
+                                ),
+
+                                // NAMA PELANGGAN
+                                DataCell(
+                                  Text(e['card']?['member']?['name'] ?? '-'),
+                                ),
+
+                                // NIK
+                                DataCell(
+                                  Text(
+                                    e['card']?['member']?['identityNumber'] ??
+                                        '-',
+                                  ),
+                                ),
+
                                 DataCell(Text(e['transactionNumber'] ?? '-')),
                                 DataCell(
                                   Text(e['card']?['serialNumber'] ?? '-'),

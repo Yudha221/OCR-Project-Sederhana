@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ocr_project/src/controllers/voucher_delete_controller.dart';
 import 'package:ocr_project/src/models/redeem.dart';
+import 'package:ocr_project/src/utils/date_helper.dart';
 
 class HistoryDeleteVoucherPage extends StatefulWidget {
   const HistoryDeleteVoucherPage({super.key});
@@ -125,13 +126,7 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                             return DataRow(
                               cells: [
                                 // Tanggal Dihapus
-                                DataCell(
-                                  Text(
-                                    e.redeemDate != '-'
-                                        ? e.redeemDate.substring(0, 10)
-                                        : '-',
-                                  ),
-                                ),
+                                DataCell(Text(formatDeleteDate(e.updatedAt))),
 
                                 // Nama Pelanggan
                                 DataCell(Text(e.customerName)),

@@ -3,6 +3,7 @@ import 'passenger.dart';
 class Redeem {
   final String id; // ✅ STRING UUID
   final String redeemDate;
+  final String updatedAt;
   final String customerName;
   final String identityNumber;
   final String transactionNumber;
@@ -23,6 +24,7 @@ class Redeem {
   Redeem({
     required this.id,
     required this.redeemDate,
+    required this.updatedAt,
     required this.customerName,
     required this.identityNumber,
     required this.transactionNumber,
@@ -67,6 +69,7 @@ class Redeem {
     return Redeem(
       id: json['id']?.toString() ?? '', // ✅ UUID STRING
       redeemDate: json['createdAt']?.toString() ?? '-',
+      updatedAt: json['updatedAt']?.toString() ?? '-',
       customerName: member['name'] ?? '-',
       identityNumber: member['identityNumber'] ?? '-',
       transactionNumber: json['transactionNumber'] ?? '-',

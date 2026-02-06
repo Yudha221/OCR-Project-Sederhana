@@ -3,6 +3,7 @@ import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/voucher_controller.dart';
 import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_voucher_page.dart';
+import 'package:ocr_project/src/utils/date_helper.dart';
 import 'package:ocr_project/src/utils/dialog_utils.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 
@@ -513,7 +514,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
             rows: tableData.map((e) {
               return DataRow(
                 cells: [
-                  DataCell(Text(e.redeemDate)),
+                  DataCell(Text(formatRedeemDate(e.redeemDate))),
                   DataCell(Text(e.customerName)),
                   DataCell(Text(e.identityNumber)),
                   DataCell(
