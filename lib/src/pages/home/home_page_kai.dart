@@ -722,11 +722,15 @@ class _HomePageState extends State<HomePageKai> {
               late final String note;
 
               if (selectedReason == 'Pembatalan Kereta') {
-                note = bookingController.text.trim();
+                note =
+                    'Alasan : Pembatalan Kereta\n'
+                    'Kode Booking : ${bookingController.text.trim()}';
               } else if (selectedReason == 'Lainnya') {
-                note = noteController.text.trim();
+                note =
+                    'Alasan : Lainnya\n'
+                    'Keterangan : ${noteController.text.trim()}';
               } else {
-                note = selectedReason!;
+                note = 'Alasan : $selectedReason';
               }
 
               Navigator.pop(context);
