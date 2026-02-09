@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/redeem_controller.dart';
 import 'package:ocr_project/src/models/last_redeem.dart';
@@ -6,7 +7,10 @@ import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_page.dart';
 import 'package:ocr_project/src/utils/date_helper.dart';
+import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
+import 'package:ocr_project/src/models/user.dart';
+import 'dart:convert';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,6 +25,7 @@ class _HomePageState extends State<HomePage> {
 
   // user
   String userName = '';
+  String roleName = '-';
 
   // loading
   bool isLoading = false;
@@ -35,8 +40,10 @@ class _HomePageState extends State<HomePage> {
   // search & filter
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
-  String? selectedCategory;
-  String? selectedCardType;
+  List<String> selectedCategories = [];
+  List<String> selectedCardTypes = [];
+  List<String> selectedStations = [];
+
   DateTime? startDate;
   DateTime? endDate;
 
@@ -52,7 +59,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadUserProfile();
     _loadRedeem();
     _loadCategories();
     _loadCardTypes();
@@ -92,9 +99,21 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _loadUserName() async {
-    final name = await _authController.getUserName();
-    setState(() => userName = name);
+  Future<void> _loadUserProfile() async {
+    const storage = FlutterSecureStorage();
+    final userJson = await storage.read(key: 'userProfile');
+
+    if (userJson != null) {
+      final user = User.fromJson(jsonDecode(userJson));
+
+      debugPrint('USERNAME : ${user.fullName}');
+      debugPrint('ROLE     : ${user.roleName}');
+
+      setState(() {
+        userName = user.fullName;
+        roleName = user.roleName;
+      });
+    }
   }
 
   Future<void> _loadRedeem() async {
@@ -119,24 +138,32 @@ class _HomePageState extends State<HomePage> {
           e.serialNumber.contains(searchQuery);
 
       final matchCategory =
-          selectedCategory == null || e.cardCategory == selectedCategory;
+          selectedCategories.isEmpty ||
+          selectedCategories.contains(e.cardCategory);
 
       final matchType =
-          selectedCardType == null || e.cardType == selectedCardType;
+          selectedCardTypes.isEmpty || selectedCardTypes.contains(e.cardType);
 
       final matchStation =
-          selectedStation == null || e.station == selectedStation;
+          selectedStations.isEmpty || selectedStations.contains(e.station);
+      ;
 
       bool matchDate = true;
-      final redeemDate = DateTime.tryParse(e.redeemDate);
+      final redeemRaw = DateTime.tryParse(e.redeemDate);
 
-      if (startDate != null && redeemDate != null) {
-        matchDate = redeemDate.isAfter(
-          startDate!.subtract(const Duration(days: 1)),
-        );
-      }
-      if (endDate != null && redeemDate != null && matchDate) {
-        matchDate = redeemDate.isBefore(endDate!.add(const Duration(days: 1)));
+      if (redeemRaw != null) {
+        final redeemDate = _onlyDate(redeemRaw);
+
+        if (startDate != null) {
+          final s = _onlyDate(startDate!);
+          matchDate = redeemDate.isAtSameMomentAs(s) || redeemDate.isAfter(s);
+        }
+
+        if (endDate != null && matchDate) {
+          final eDate = _onlyDate(endDate!);
+          matchDate =
+              redeemDate.isAtSameMomentAs(eDate) || redeemDate.isBefore(eDate);
+        }
       }
 
       return matchSearch &&
@@ -160,14 +187,18 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _searchController.clear();
       searchQuery = '';
-      selectedCategory = null;
-      selectedCardType = null;
+      selectedCategories.clear();
+      selectedCardTypes.clear();
+      selectedStations.clear();
       startDate = null;
       endDate = null;
-      selectedStation = null;
       currentPage = 1;
       _applyFilterAndPagination();
     });
+  }
+
+  DateTime _onlyDate(DateTime d) {
+    return DateTime(d.year, d.month, d.day);
   }
 
   // ================= UI =================
@@ -176,9 +207,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: _buildAppBar(),
-      drawer: MyDrawer(
-        userName: userName, // 👈 KIRIM USERNAME KE DRAWER
-      ),
+      drawer: MyDrawer(userName: userName, roleName: roleName),
 
       // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
       body: RefreshIndicator(
@@ -193,7 +222,42 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _searchSection(),
               const SizedBox(height: 16),
-              _filterSection(),
+              FilterButton(
+                categoryItems: categoryItems,
+                cardTypeItems: cardTypeItems,
+                stationItems: stationItems,
+
+                selectedCategories: selectedCategories,
+                selectedCardTypes: selectedCardTypes,
+                selectedStations: selectedStations,
+
+                startDate: startDate,
+                endDate: endDate,
+
+                onCategoryChanged: (v) {
+                  setState(() => selectedCategories = v);
+                },
+                onCardTypeChanged: (v) {
+                  setState(() => selectedCardTypes = v);
+                },
+                onStationChanged: (v) {
+                  setState(() => selectedStations = v);
+                },
+
+                onStartDateChanged: (d) {
+                  setState(() => startDate = d);
+                },
+                onEndDateChanged: (d) {
+                  setState(() => endDate = d);
+                },
+
+                onReset: _resetFilter,
+                onApply: () {
+                  currentPage = 1;
+                  setState(_applyFilterAndPagination);
+                },
+              ),
+
               const SizedBox(height: 20),
               _tableSection(),
             ],
@@ -280,90 +344,6 @@ class _HomePageState extends State<HomePage> {
           currentPage = 1;
           setState(_applyFilterAndPagination);
         },
-      ),
-    );
-  }
-
-  // ================= FILTER =================
-  Widget _filterSection() {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 3.2,
-              ),
-              children: [
-                _dropdown(
-                  label: 'Card Category',
-                  value: selectedCategory,
-                  items: categoryItems,
-                  onChanged: (v) {
-                    selectedCategory = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _dropdown(
-                  label: 'Card Type',
-                  value: selectedCardType,
-                  items: cardTypeItems,
-                  onChanged: (v) {
-                    selectedCardType = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _dropdown(
-                  label: 'Stasiun',
-                  value: selectedStation,
-                  items: stationItems,
-                  onChanged: (v) {
-                    selectedStation = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _datePicker(
-                  label: 'Start Date',
-                  date: startDate,
-                  onPicked: (d) {
-                    startDate = d;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _datePicker(
-                  label: 'End Date',
-                  date: endDate,
-                  onPicked: (d) {
-                    endDate = d;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                onPressed: _resetFilter,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reset Filter'),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -629,54 +609,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ],
-    );
-  }
-
-  // ================= COMPONENT =================
-  Widget _dropdown({
-    required String label,
-    required List<String> items,
-    String? value,
-    required Function(String?) onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      isExpanded: true,
-      items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-          .toList(),
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _datePicker({
-    required String label,
-    required DateTime? date,
-    required Function(DateTime) onPicked,
-  }) {
-    return TextField(
-      readOnly: true,
-      controller: TextEditingController(
-        text: date == null ? '' : '${date.day}/${date.month}/${date.year}',
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: const Icon(Icons.calendar_today),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date ?? DateTime.now(),
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-        );
-        if (picked != null) onPicked(picked);
-      },
     );
   }
 

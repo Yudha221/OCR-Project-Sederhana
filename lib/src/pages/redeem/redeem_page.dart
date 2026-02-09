@@ -424,32 +424,71 @@ class _RedeemPageState extends State<RedeemPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Redeem Terakhir'),
-        content: const Text('Simpan bukti last redeem?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showRedeemSuccessDialog();
-            },
-            child: const Text('Tanpa Bukti'),
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('Redeem Terakhir'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 3️⃣ PREVIEW FOTO
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _lastRedeemImage!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Simpan foto ini sebagai bukti last redeem?'),
+            ],
           ),
-          ElevatedButton(
-            onPressed: _lastRedeemImage == null
-                ? null
-                : () async {
-                    Navigator.pop(context);
-                    await _lastRedeemController.uploadPhoto(
-                      lastRedeemId,
-                      _lastRedeemImage!,
-                    );
-                    _showRedeemSuccessDialog();
-                  },
-            child: const Text('Dengan Bukti'),
-          ),
-        ],
-      ),
+          actions: [
+            // 4️⃣ TANPA BUKTI
+            TextButton(
+              onPressed: () {
+                _lastRedeemImage = null;
+                Navigator.pop(context);
+                _showRedeemSuccessDialog();
+              },
+              child: const Text('Tanpa Bukti'),
+            ),
+
+            // 5️⃣ SIMPAN DENGAN BUKTI
+            ElevatedButton(
+              onPressed: _lastRedeemImage == null
+                  ? null
+                  : () async {
+                      Navigator.pop(context); // 1️⃣ tutup popup preview
+
+                      try {
+                        // 2️⃣ UPLOAD FOTO
+                        await _lastRedeemController.uploadPhoto(
+                          lastRedeemId,
+                          _lastRedeemImage!,
+                        );
+
+                        // 3️⃣ bersihkan image lokal
+                        _lastRedeemImage = null;
+
+                        // 4️⃣ JIKA SAMPAI SINI → UPLOAD PASTI BERHASIL
+                        _showRedeemSuccessDialog();
+                      } catch (e) {
+                        // 5️⃣ JIKA UPLOAD GAGAL
+                        _showInfoDialog(
+                          title: 'Gagal',
+                          message: 'Simpan bukti gagal. Silakan coba lagi.',
+                          icon: Icons.error,
+                          color: Colors.red,
+                        );
+                      }
+                    },
+              child: const Text('Simpan dengan Bukti'),
+            ),
+          ],
+        );
+      },
     );
   }
 

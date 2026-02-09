@@ -10,8 +10,9 @@ import 'my_drawer_tile.dart';
 
 class MyDrawer extends StatelessWidget {
   final String userName;
+  final String roleName;
 
-  const MyDrawer({super.key, required this.userName});
+  const MyDrawer({super.key, required this.userName, required this.roleName});
 
   static const _bgColor = Color(0xFF7A1E2D);
 
@@ -36,10 +37,15 @@ class MyDrawer extends StatelessWidget {
   Widget _buildHeader() {
     return DrawerHeader(
       decoration: const BoxDecoration(color: _bgColor),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: const [_UserAvatar(), SizedBox(height: 12), _LoginLabel()],
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [_UserAvatar(), SizedBox(height: 8), _LoginLabel()],
+          ),
+        ),
       ),
     );
   }
@@ -52,10 +58,10 @@ class MyDrawer extends StatelessWidget {
           text: 'Redeem FWC',
           icon: Icons.credit_card,
           onTap: () {
-            Navigator.pop(context); // nutup drawer
+            Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
+              MaterialPageRoute(builder: (_) => const HomePage()),
             );
           },
         ),
@@ -63,10 +69,10 @@ class MyDrawer extends StatelessWidget {
           text: 'Redeem FWCKAI',
           icon: Icons.train,
           onTap: () {
-            Navigator.pop(context); // nutup drawer
+            Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const HomePageKai()),
+              MaterialPageRoute(builder: (_) => const HomePageKai()),
             );
           },
         ),
@@ -74,10 +80,10 @@ class MyDrawer extends StatelessWidget {
           text: 'Redeem Voucher',
           icon: Icons.confirmation_num,
           onTap: () {
-            Navigator.pop(context); // nutup drawer
+            Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const HomePageVoucher()),
+              MaterialPageRoute(builder: (_) => const HomePageVoucher()),
             );
           },
         ),
@@ -85,12 +91,10 @@ class MyDrawer extends StatelessWidget {
           text: 'History Delete FWC',
           icon: Icons.delete_forever,
           onTap: () {
-            Navigator.pop(context); // nutup drawer
+            Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const HistoryDeletePage(),
-              ),
+              MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
             );
           },
         ),
@@ -98,11 +102,11 @@ class MyDrawer extends StatelessWidget {
           text: 'History Delete Voucher',
           icon: Icons.credit_card_off,
           onTap: () {
-            Navigator.pop(context); // nutup drawer
+            Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const HistoryDeleteVoucherPage(),
+                builder: (_) => const HistoryDeleteVoucherPage(),
               ),
             );
           },
@@ -111,12 +115,10 @@ class MyDrawer extends StatelessWidget {
           text: 'History Delete FWCKAI',
           icon: Icons.delete_sweep,
           onTap: () {
-            Navigator.pop(context); // nutup drawer
+            Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const HistoryDeletePage(),
-              ),
+              MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
             );
           },
         ),
@@ -135,7 +137,6 @@ class MyDrawer extends StatelessWidget {
     );
   }
 
-  // ================= LOGOUT DIALOG =================
   void _showLogoutDialog(BuildContext context) {
     final authController = AuthController();
 
@@ -182,9 +183,9 @@ class _UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const CircleAvatar(
-      radius: 32,
+      radius: 28, // 🔥 sedikit diperkecil agar aman
       backgroundColor: Colors.white,
-      child: Icon(Icons.person, color: Colors.black, size: 32),
+      child: Icon(Icons.person, color: Colors.black, size: 28),
     );
   }
 }
@@ -195,7 +196,13 @@ class _LoginLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final drawer = context.findAncestorWidgetOfExactType<MyDrawer>();
-    final userName = drawer?.userName.isEmpty == true ? '-' : drawer!.userName;
+
+    final userName = drawer?.userName.isNotEmpty == true
+        ? drawer!.userName
+        : '-';
+    final roleName = drawer?.roleName.isNotEmpty == true
+        ? drawer!.roleName
+        : '-';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -207,7 +214,6 @@ class _LoginLabel extends StatelessWidget {
             fontSize: 12,
             letterSpacing: 0.5,
           ),
-          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
@@ -219,6 +225,15 @@ class _LoginLabel extends StatelessWidget {
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          roleName,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
           ),
         ),
       ],

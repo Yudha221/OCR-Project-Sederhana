@@ -5,6 +5,7 @@ import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_voucher_page.dart';
 import 'package:ocr_project/src/utils/date_helper.dart';
 import 'package:ocr_project/src/utils/dialog_utils.dart';
+import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 
 class HomePageVoucher extends StatefulWidget {
@@ -21,6 +22,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // user
   String userName = '';
+  String roleName = '-';
 
   // loading
   bool isLoading = false;
@@ -34,9 +36,9 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   // search & filter
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
-  String? selectedCategory;
-  String? selectedCardType;
-  String? selectedStation;
+  List<String> selectedCategories = [];
+  List<String> selectedCardTypes = [];
+  List<String> selectedStations = [];
   DateTime? startDate;
   DateTime? endDate;
 
@@ -97,15 +99,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     setState(() => userName = name);
   }
 
-  Future<DateTime?> _pickDate(DateTime? initial) {
-    return showDatePicker(
-      context: context,
-      initialDate: initial ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-  }
-
   Future<void> _loadVoucher() async {
     setState(() => isLoading = true);
 
@@ -128,24 +121,31 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
           e.serialNumber.contains(searchQuery);
 
       final matchCategory =
-          selectedCategory == null || e.cardCategory == selectedCategory;
+          selectedCategories.isEmpty ||
+          selectedCategories.contains(e.cardCategory);
 
       final matchType =
-          selectedCardType == null || e.cardType == selectedCardType;
+          selectedCardTypes.isEmpty || selectedCardTypes.contains(e.cardType);
 
       final matchStation =
-          selectedStation == null || e.station == selectedStation;
+          selectedStations.isEmpty || selectedStations.contains(e.station);
 
       bool matchDate = true;
-      final redeemDate = DateTime.tryParse(e.redeemDate);
+      final redeemRaw = DateTime.tryParse(e.redeemDate);
 
-      if (startDate != null && redeemDate != null) {
-        matchDate = redeemDate.isAfter(
-          startDate!.subtract(const Duration(days: 1)),
-        );
-      }
-      if (endDate != null && redeemDate != null && matchDate) {
-        matchDate = redeemDate.isBefore(endDate!.add(const Duration(days: 1)));
+      if (redeemRaw != null) {
+        final redeemDate = _onlyDate(redeemRaw);
+
+        if (startDate != null) {
+          final s = _onlyDate(startDate!);
+          matchDate = redeemDate.isAtSameMomentAs(s) || redeemDate.isAfter(s);
+        }
+
+        if (endDate != null && matchDate) {
+          final eDate = _onlyDate(endDate!);
+          matchDate =
+              redeemDate.isAtSameMomentAs(eDate) || redeemDate.isBefore(eDate);
+        }
       }
 
       return matchSearch &&
@@ -169,13 +169,18 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     setState(() {
       _searchController.clear();
       searchQuery = '';
-      selectedCategory = null;
-      selectedCardType = null;
+      selectedCategories.clear();
+      selectedCardTypes.clear();
+      selectedStations.clear();
       startDate = null;
       endDate = null;
       currentPage = 1;
       _applyFilterAndPagination();
     });
+  }
+
+  DateTime _onlyDate(DateTime d) {
+    return DateTime(d.year, d.month, d.day);
   }
 
   // ================= UI =================
@@ -184,7 +189,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: _buildAppBar(),
-      drawer: MyDrawer(userName: userName),
+      drawer: MyDrawer(userName: userName, roleName: roleName),
 
       body: RefreshIndicator(
         onRefresh: _loadVoucher, // 🔥
@@ -294,147 +299,30 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // ================= FILTER =================
   Widget _filterSection() {
-    final isFilterActive =
-        selectedCategory != null ||
-        selectedCardType != null ||
-        startDate != null ||
-        endDate != null;
+    return FilterButton(
+      categoryItems: voucherCategoryItems,
+      cardTypeItems: voucherTypeItems,
+      stationItems: stationItems,
 
-    return Card(
-      color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ===== HEADER =====
-            Row(
-              children: [
-                const Icon(Icons.filter_alt_outlined, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  'Filter Data',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                if (isFilterActive)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Filter Aktif',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+      selectedCategories: selectedCategories,
+      selectedCardTypes: selectedCardTypes,
+      selectedStations: selectedStations,
 
-            const SizedBox(height: 16),
-            // ===== DATE RANGE =====
-            Row(
-              children: [
-                Expanded(
-                  child: _datePicker(
-                    label: 'Tanggal Mulai',
-                    value: startDate,
-                    onTap: () async {
-                      final date = await _pickDate(startDate);
-                      if (date != null) {
-                        startDate = date;
-                        currentPage = 1;
-                        setState(_applyFilterAndPagination);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _datePicker(
-                    label: 'Tanggal Akhir',
-                    value: endDate,
-                    onTap: () async {
-                      final date = await _pickDate(endDate);
-                      if (date != null) {
-                        endDate = date;
-                        currentPage = 1;
-                        setState(_applyFilterAndPagination);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // ===== DROPDOWN =====
-            GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 3.4,
-              ),
-              children: [
-                _dropdown(
-                  label: 'Kategori Voucher',
-                  value: selectedCategory,
-                  items: voucherCategoryItems,
-                  onChanged: (v) {
-                    selectedCategory = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _dropdown(
-                  label: 'Tipe Voucher',
-                  value: selectedCardType,
-                  items: voucherTypeItems,
-                  onChanged: (v) {
-                    selectedCardType = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-                _dropdown(
-                  label: 'Stasiun',
-                  value: selectedStation,
-                  items: stationItems,
-                  onChanged: (v) {
-                    selectedStation = v;
-                    currentPage = 1;
-                    setState(_applyFilterAndPagination);
-                  },
-                ),
-              ],
-            ),
+      startDate: startDate,
+      endDate: endDate,
 
-            // ===== ACTION BUTTON =====
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _resetFilter,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reset'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      onCategoryChanged: (v) => selectedCategories = v,
+      onCardTypeChanged: (v) => selectedCardTypes = v,
+      onStationChanged: (v) => selectedStations = v,
+      onStartDateChanged: (v) => startDate = v,
+      onEndDateChanged: (v) => endDate = v,
+
+      onApply: () {
+        currentPage = 1;
+        setState(_applyFilterAndPagination);
+      },
+
+      onReset: _resetFilter,
     );
   }
 
@@ -704,33 +592,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   }
 
   // ================= UTIL =================
-  Widget _dropdown({
-    required String label,
-    required List<String> items,
-    String? value,
-    required Function(String?) onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      hint: Text('Semua $label'),
-      isExpanded: true,
-      items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-          .toList(),
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        suffixIcon: value != null
-            ? IconButton(
-                icon: const Icon(Icons.clear, size: 18),
-                onPressed: () => onChanged(null),
-              )
-            : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
 
   void _confirmDelete(String id) {
     DialogUtils.confirmDeleteFancy(
@@ -769,29 +630,5 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   String formatJourney(String value) {
     if (value == 'ROUNDTRIP') return 'Round Trip';
     return 'Single Journey';
-  }
-
-  Widget _datePicker({
-    required String label,
-    required DateTime? value,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          isDense: true,
-        ),
-        child: Text(
-          value == null
-              ? 'mm/dd/yyy'
-              : '${value.day}/${value.month}/${value.year}',
-          style: const TextStyle(fontSize: 14),
-        ),
-      ),
-    );
   }
 }
