@@ -15,66 +15,48 @@ class LoginController {
 
   Future<MyResponse<User>> login() async {
     try {
-      debugPrint('================ LOGIN REQUEST ================');
-      debugPrint('USERNAME : ${usernameController.text}');
-      debugPrint('PASSWORD : ${passwordController.text}');
-
       final response = await _repository.login(
         usernameController.text.trim(),
         passwordController.text.trim(),
       );
 
-      debugPrint('================ LOGIN RESPONSE ================');
-      debugPrint('STATUS CODE : ${response.statusCode}');
-      debugPrint('BODY        : ${response.data}');
-      debugPrint('================================================');
-
       // ================= SUCCESS =================
       if (response.statusCode == 200) {
         final body = response.data as Map<String, dynamic>;
-
-        if (!body.containsKey('data')) {
-          return MyResponse(
-            code: 1,
-            message: 'Format response tidak sesuai (data)',
-          );
-        }
-
-        final data = body['data'] as Map<String, dynamic>;
+        final data = body['data'];
 
         final token = data['token'];
         final userJson = data['user'];
 
-        if (token == null || userJson == null) {
-          return MyResponse(code: 1, message: 'Token / User tidak ditemukan');
-        }
-
-        // 🔐 SIMPAN KE STORAGE
         await storage.write(key: 'token', value: token.toString());
         await storage.write(key: 'userProfile', value: jsonEncode(userJson));
-
-        final user = User.fromJson(userJson);
-
-        debugPrint('✅ LOGIN SUCCESS');
 
         return MyResponse<User>(
           code: 0,
           message: body['message'] ?? 'Login berhasil',
-          data: user,
+          data: User.fromJson(userJson),
         );
       }
 
-      // ================= FAILED =================
+      // ================= USER / PASSWORD SALAH =================
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        return MyResponse<User>(
+          code: 1,
+          message: 'Username atau password salah',
+        );
+      }
+
+      // ================= SERVER ERROR =================
       return MyResponse<User>(
         code: 1,
-        message: 'Login gagal (status ${response.statusCode})',
+        message: 'Server sedang bermasalah, silakan coba lagi',
       );
-    } catch (e, s) {
-      debugPrint('🔥 LOGIN EXCEPTION');
-      debugPrint('ERROR : $e');
-      debugPrint('STACK : $s');
-
-      return MyResponse<User>(code: 1, message: 'Terjadi error saat login');
+    } catch (_) {
+      // ================= INTERNET ERROR =================
+      return MyResponse<User>(
+        code: 1,
+        message: 'Koneksi internet terputus, periksa jaringan Anda',
+      );
     }
   }
 }

@@ -23,11 +23,60 @@ class _LoginPageState extends State<LoginPage> {
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message), backgroundColor: Colors.red),
-      );
+      return;
     }
+
+    String title = 'Login Gagal';
+    String message = 'Terjadi kesalahan';
+
+    if (response.message == 'AUTH') {
+      message = 'Username atau password salah';
+    } else if (response.message == 'NETWORK') {
+      title = 'Koneksi Terputus';
+      message = 'Periksa koneksi internet Anda';
+    } else if (response.message == 'SERVER') {
+      title = 'Server Error';
+      message = 'Server sedang bermasalah';
+    } else {
+      message = response.message;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(message, style: const TextStyle(fontSize: 14)),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7A1E2D),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: Colors.black)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

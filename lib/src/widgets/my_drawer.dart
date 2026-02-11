@@ -6,13 +6,20 @@ import 'package:ocr_project/src/pages/history_delate/history_delate_voucher.dart
 import 'package:ocr_project/src/pages/home/home_page.dart';
 import 'package:ocr_project/src/pages/home/home_page_kai.dart';
 import 'package:ocr_project/src/pages/home/home_page_voucher.dart';
+import 'package:ocr_project/src/utils/role_access.dart';
 import 'my_drawer_tile.dart';
 
 class MyDrawer extends StatelessWidget {
   final String userName;
   final String roleName;
+  final RoleAccess roleAccess;
 
-  const MyDrawer({super.key, required this.userName, required this.roleName});
+  const MyDrawer({
+    super.key,
+    required this.userName,
+    required this.roleName,
+    required this.roleAccess,
+  });
 
   static const _bgColor = Color(0xFF7A1E2D);
 
@@ -54,74 +61,80 @@ class MyDrawer extends StatelessWidget {
   Widget _buildMenu(BuildContext context) {
     return Column(
       children: [
-        MyDrawerTile(
-          text: 'Redeem FWC',
-          icon: Icons.credit_card,
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HomePage()),
-            );
-          },
-        ),
-        MyDrawerTile(
-          text: 'Redeem FWCKAI',
-          icon: Icons.train,
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HomePageKai()),
-            );
-          },
-        ),
-        MyDrawerTile(
-          text: 'Redeem Voucher',
-          icon: Icons.confirmation_num,
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HomePageVoucher()),
-            );
-          },
-        ),
-        MyDrawerTile(
-          text: 'History Delete FWC',
-          icon: Icons.delete_forever,
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
-            );
-          },
-        ),
-        MyDrawerTile(
-          text: 'History Delete Voucher',
-          icon: Icons.credit_card_off,
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const HistoryDeleteVoucherPage(),
-              ),
-            );
-          },
-        ),
-        MyDrawerTile(
-          text: 'History Delete FWCKAI',
-          icon: Icons.delete_sweep,
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
-            );
-          },
-        ),
+        if (roleAccess.canFWC)
+          MyDrawerTile(
+            text: 'Redeem FWC',
+            icon: Icons.credit_card,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HomePage()),
+              );
+            },
+          ),
+        if (roleAccess.canFWCKai)
+          MyDrawerTile(
+            text: 'Redeem FWCKAI',
+            icon: Icons.train,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HomePageKai()),
+              );
+            },
+          ),
+        if (roleAccess.canVoucher)
+          MyDrawerTile(
+            text: 'Redeem Voucher',
+            icon: Icons.confirmation_num,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HomePageVoucher()),
+              );
+            },
+          ),
+        if (roleAccess.canDelete)
+          MyDrawerTile(
+            text: 'History Delete FWC',
+            icon: Icons.delete_forever,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
+              );
+            },
+          ),
+        if (roleAccess.canDelete)
+          MyDrawerTile(
+            text: 'History Delete Voucher',
+            icon: Icons.delete_forever,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const HistoryDeleteVoucherPage(),
+                ),
+              );
+            },
+          ),
+        if (roleAccess.canDelete)
+          MyDrawerTile(
+            text: 'History Delete FWCKAI',
+            icon: Icons.delete_sweep,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
+              );
+            },
+          ),
       ],
     );
   }

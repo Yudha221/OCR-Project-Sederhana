@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:ocr_project/src/utils/role_access.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/voucher_controller.dart';
 import 'package:ocr_project/src/models/redeem.dart';
@@ -23,6 +26,9 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   // user
   String userName = '';
   String roleName = '-';
+  RoleAccess? roleAccess;
+  String roleCode = '';
+  String? userStation;
 
   // loading
   bool isLoading = false;
@@ -54,7 +60,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadUserProfile();
     _loadVoucher();
     _loadVoucherCategories();
     _loadVoucherTypes();
@@ -94,9 +100,27 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     });
   }
 
-  Future<void> _loadUserName() async {
-    final name = await _authController.getUserName();
-    setState(() => userName = name);
+  Future<void> _loadUserProfile() async {
+    const storage = FlutterSecureStorage();
+    final userJson = await storage.read(key: 'userProfile');
+    if (userJson == null) return;
+
+    final raw = jsonDecode(userJson);
+
+    roleCode = raw['role']['roleCode']; // petugas / admin / dll
+    userStation = raw['station']?['stationName'];
+
+    roleAccess = RoleAccess(roleCode);
+
+    setState(() {
+      userName = raw['fullName'];
+      roleName = raw['role']['roleName'];
+
+      // 🔒 KUNCI STATION
+      if (roleAccess!.lockStation && userStation != null) {
+        selectedStations = [userStation!];
+      }
+    });
   }
 
   Future<void> _loadVoucher() async {
@@ -171,7 +195,13 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
       searchQuery = '';
       selectedCategories.clear();
       selectedCardTypes.clear();
-      selectedStations.clear();
+
+      if (roleAccess?.lockStation == true && userStation != null) {
+        selectedStations = [userStation!];
+      } else {
+        selectedStations.clear();
+      }
+
       startDate = null;
       endDate = null;
       currentPage = 1;
@@ -189,7 +219,13 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: _buildAppBar(),
-      drawer: MyDrawer(userName: userName, roleName: roleName),
+      drawer: roleAccess == null
+          ? null
+          : MyDrawer(
+              userName: userName,
+              roleName: roleName,
+              roleAccess: roleAccess!, // 🔥 INI KUNCI
+            ),
 
       body: RefreshIndicator(
         onRefresh: _loadVoucher, // 🔥
@@ -231,29 +267,28 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
-        ElevatedButton(
-          onPressed: () async {
-            // 🔥 BUKA HALAMAN REDEEM & TUNGGU HASIL
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RedeemVoucherPage()),
-            );
+        if (roleAccess?.canRedeem == true)
+          ElevatedButton(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RedeemVoucherPage()),
+              );
 
-            // 🔥 TERIMA SINYAL & RELOAD TABEL
-            if (result == true) {
-              await _loadVoucher();
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              if (result == true) {
+                await _loadVoucher();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
+            child: const Text('Redeem'),
           ),
-          child: const Text('Redeem'),
-        ),
       ],
     );
   }
@@ -302,7 +337,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     return FilterButton(
       categoryItems: voucherCategoryItems,
       cardTypeItems: voucherTypeItems,
-      stationItems: stationItems,
+      stationItems: roleAccess?.lockStation == true ? [] : stationItems,
 
       selectedCategories: selectedCategories,
       selectedCardTypes: selectedCardTypes,
@@ -313,7 +348,10 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
       onCategoryChanged: (v) => selectedCategories = v,
       onCardTypeChanged: (v) => selectedCardTypes = v,
-      onStationChanged: (v) => selectedStations = v,
+      onStationChanged: roleAccess?.lockStation == true
+          ? (_) {}
+          : (v) => selectedStations = v,
+
       onStartDateChanged: (v) => startDate = v,
       onEndDateChanged: (v) => endDate = v,
 
@@ -390,9 +428,9 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
               DataColumn(label: Text('Nama Pelangan')),
               DataColumn(label: Text('NIK Pelangan')),
               DataColumn(label: Text('Nomor Transaksi')),
-              DataColumn(label: Text('Serial Voucher')),
-              DataColumn(label: Text('Kategori Voucher')),
-              DataColumn(label: Text('Tipe Voucher')),
+              DataColumn(label: Text('Serial Kartu')),
+              DataColumn(label: Text('Kategori Kartu')),
+              DataColumn(label: Text('Tipe Kartu')),
               DataColumn(label: Text('Tipe Perjalanan')),
               DataColumn(label: Text('Sisa Kuota')),
               DataColumn(label: Text('Operator')),
@@ -529,7 +567,10 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                   // ===== AKSI =====
                   DataCell(
                     OutlinedButton.icon(
-                      onPressed: () => _confirmDelete(e.id),
+                      onPressed: roleAccess?.canDelete == true
+                          ? () => _confirmDelete(e.id)
+                          : null,
+
                       icon: const Icon(
                         Icons.delete,
                         size: 16,

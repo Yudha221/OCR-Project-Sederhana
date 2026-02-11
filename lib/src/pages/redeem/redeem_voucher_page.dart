@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:ocr_project/src/controllers/voucher_controller.dart';
+import 'package:ocr_project/src/utils/ui_popup_vou.dart';
 
 class RedeemVoucherPage extends StatefulWidget {
   const RedeemVoucherPage({super.key});
@@ -108,7 +109,13 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
   Future<void> _verifySerial() async {
     final serial = _serialController.text.trim();
     if (serial.isEmpty) {
-      _snack('Serial voucher wajib diisi', isError: true);
+      PopupUtils.show(
+        context: context,
+        title: 'Validasi Gagal',
+        message: 'Serial voucher wajib diisi',
+        isError: true,
+      );
+
       return;
     }
 
@@ -240,9 +247,18 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
         _cardData = res['data']; // 🔥 SIMPAN DATA CARD
       });
 
-      _snack('Voucher valid, silakan isi Nama & NIK');
+      PopupUtils.show(
+        context: context,
+        title: 'Voucher Valid',
+        message: 'Voucher valid, silakan isi Nama & NIK',
+      );
     } catch (e) {
-      _snack(e.toString(), isError: true);
+      PopupUtils.show(
+        context: context,
+        title: 'Proses Gagal',
+        message: e.toString(),
+        isError: true,
+      );
     } finally {
       setState(() => _isVerifying = false);
     }
@@ -267,9 +283,12 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
       _showSuccess();
     } catch (e) {
-      _snack(e.toString(), isError: true);
-    } finally {
-      setState(() => _isRedeeming = false);
+      PopupUtils.show(
+        context: context,
+        title: 'Redeem Gagal',
+        message: e.toString(),
+        isError: true,
+      );
     }
   }
 
@@ -292,15 +311,6 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
           ],
         );
       },
-    );
-  }
-
-  void _snack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
     );
   }
 
@@ -412,8 +422,11 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
                         'Serial Voucher',
                         _cardData?['serialNumber'] ?? '-',
                       ),
-                      infoRow('Kategori', _cardData?['cardCategory'] ?? '-'),
-                      infoRow('Tipe Kartu', _cardData?['cardType'] ?? '-'),
+                      infoRow(
+                        'Kategori Voucher',
+                        _cardData?['cardCategory'] ?? '-',
+                      ),
+                      infoRow('Tipe Voucher', _cardData?['cardType'] ?? '-'),
                       infoRow(
                         'Status',
                         _cardData?['statusActive'] ?? '-',

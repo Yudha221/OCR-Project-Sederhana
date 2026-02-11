@@ -11,6 +11,7 @@ import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 import 'package:ocr_project/src/models/user.dart';
 import 'dart:convert';
+import 'package:ocr_project/src/utils/role_access.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,6 +27,9 @@ class _HomePageState extends State<HomePage> {
   // user
   String userName = '';
   String roleName = '-';
+  RoleAccess? roleAccess;
+  String roleCode = '';
+  String? userStation;
 
   // loading
   bool isLoading = false;
@@ -104,14 +108,21 @@ class _HomePageState extends State<HomePage> {
     final userJson = await storage.read(key: 'userProfile');
 
     if (userJson != null) {
-      final user = User.fromJson(jsonDecode(userJson));
+      final raw = jsonDecode(userJson);
 
-      debugPrint('USERNAME : ${user.fullName}');
-      debugPrint('ROLE     : ${user.roleName}');
+      roleCode = raw['role']['roleCode'];
+      userStation = raw['station']?['stationName'];
+
+      roleAccess = RoleAccess(roleCode);
 
       setState(() {
-        userName = user.fullName;
-        roleName = user.roleName;
+        userName = raw['fullName'];
+        roleName = raw['role']['roleName'];
+
+        // 🔒 kalau role terkunci → auto station
+        if (roleAccess!.lockStation && userStation != null) {
+          selectedStations = [userStation!];
+        }
       });
     }
   }
@@ -189,7 +200,13 @@ class _HomePageState extends State<HomePage> {
       searchQuery = '';
       selectedCategories.clear();
       selectedCardTypes.clear();
-      selectedStations.clear();
+
+      if (roleAccess?.lockStation == true && userStation != null) {
+        selectedStations = [userStation!];
+      } else {
+        selectedStations.clear();
+      }
+
       startDate = null;
       endDate = null;
       currentPage = 1;
@@ -207,7 +224,13 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: _buildAppBar(),
-      drawer: MyDrawer(userName: userName, roleName: roleName),
+      drawer: roleAccess == null
+          ? null
+          : MyDrawer(
+              userName: userName,
+              roleName: roleName,
+              roleAccess: roleAccess!, // 🔥 INI KUNCI
+            ),
 
       // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
       body: RefreshIndicator(
@@ -225,7 +248,9 @@ class _HomePageState extends State<HomePage> {
               FilterButton(
                 categoryItems: categoryItems,
                 cardTypeItems: cardTypeItems,
-                stationItems: stationItems,
+                stationItems: roleAccess?.lockStation == true
+                    ? []
+                    : stationItems,
 
                 selectedCategories: selectedCategories,
                 selectedCardTypes: selectedCardTypes,
@@ -240,9 +265,9 @@ class _HomePageState extends State<HomePage> {
                 onCardTypeChanged: (v) {
                   setState(() => selectedCardTypes = v);
                 },
-                onStationChanged: (v) {
-                  setState(() => selectedStations = v);
-                },
+                onStationChanged: roleAccess?.lockStation == true
+                    ? (_) {}
+                    : (v) => setState(() => selectedStations = v),
 
                 onStartDateChanged: (d) {
                   setState(() => startDate = d);
@@ -288,23 +313,24 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RedeemPage()),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8), // 👈 BORDER RADIUS
+        if (roleAccess?.canRedeem == true)
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RedeemPage()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: const Text('Redeem'),
           ),
-          child: const Text('Redeem'),
-        ),
       ],
     );
   }
@@ -553,7 +579,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                   DataCell(
                     OutlinedButton.icon(
-                      onPressed: () => _confirmDelete(e.id),
+                      onPressed: roleAccess?.canDelete == true
+                          ? () => _confirmDelete(e.id)
+                          : null,
+
                       icon: const Icon(
                         Icons.delete,
                         size: 16,
