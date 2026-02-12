@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ocr_project/src/models/my_response.dart';
 import 'package:ocr_project/src/models/user.dart';
 import 'package:ocr_project/src/repositories/login_repository.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class LoginController {
   final LoginRepository _repository = LoginRepository();
@@ -30,6 +31,9 @@ class LoginController {
 
         await storage.write(key: 'token', value: token.toString());
         await storage.write(key: 'userProfile', value: jsonEncode(userJson));
+
+        final packageInfo = await PackageInfo.fromPlatform();
+        await storage.write(key: 'appVersion', value: packageInfo.version);
 
         return MyResponse<User>(
           code: 0,

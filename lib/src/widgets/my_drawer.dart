@@ -63,7 +63,7 @@ class MyDrawer extends StatelessWidget {
       children: [
         if (roleAccess.canFWC)
           MyDrawerTile(
-            text: 'Redeem FWC',
+            text: 'Redeem Kuota FWC',
             icon: Icons.credit_card,
             onTap: () {
               Navigator.pop(context);
@@ -75,7 +75,7 @@ class MyDrawer extends StatelessWidget {
           ),
         if (roleAccess.canFWCKai)
           MyDrawerTile(
-            text: 'Redeem FWCKAI',
+            text: 'Redeem Kuota FWCKAI',
             icon: Icons.train,
             onTap: () {
               Navigator.pop(context);
@@ -87,7 +87,7 @@ class MyDrawer extends StatelessWidget {
           ),
         if (roleAccess.canVoucher)
           MyDrawerTile(
-            text: 'Redeem Voucher',
+            text: 'Redeem Kuota Voucher',
             icon: Icons.confirmation_num,
             onTap: () {
               Navigator.pop(context);
@@ -111,8 +111,20 @@ class MyDrawer extends StatelessWidget {
           ),
         if (roleAccess.canDelete)
           MyDrawerTile(
-            text: 'History Delete Voucher',
+            text: 'History Delete FWCKAI',
             icon: Icons.delete_forever,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
+              );
+            },
+          ),
+        if (roleAccess.canDelete)
+          MyDrawerTile(
+            text: 'History Delete Voucher',
+            icon: Icons.delete_sweep,
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -120,18 +132,6 @@ class MyDrawer extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => const HistoryDeleteVoucherPage(),
                 ),
-              );
-            },
-          ),
-        if (roleAccess.canDelete)
-          MyDrawerTile(
-            text: 'History Delete FWCKAI',
-            icon: Icons.delete_sweep,
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const HistoryDeletePage()),
               );
             },
           ),

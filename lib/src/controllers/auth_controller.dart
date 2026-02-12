@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AuthController {
   final _storage = const FlutterSecureStorage();
@@ -19,6 +20,20 @@ class AuthController {
   }
 
   Future<bool> isLoggedIn() async {
-    return await _storage.read(key: 'token') != null;
+    final token = await _storage.read(key: 'token');
+    if (token == null) return false;
+
+    final savedVersion = await _storage.read(key: 'appVersion');
+
+    final packageInfo = await PackageInfo.fromPlatform();
+    final currentVersion = packageInfo.version;
+
+    // 🔥 Kalau versi beda → force logout
+    if (savedVersion != currentVersion) {
+      await logout();
+      return false;
+    }
+
+    return true;
   }
 }

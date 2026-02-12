@@ -85,64 +85,61 @@ class _LoginPageState extends State<LoginPage> {
       resizeToAvoidBottomInset: true, // 🔥 INI KUNCINYA
       backgroundColor: const Color(0xFF7A1E2D),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                // LOGO (TETAP)
-                Image.asset(
-                  'assets/images/Whoosh_Member_of_KAI.png',
-                  width: 250,
-                  height: 250,
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Transform.translate(
+                        offset: const Offset(0, -60),
+                        child: Image.asset(
+                          'assets/images/Whoosh_Member_of_KAI.png',
+                          width: 250,
+                          height: 250,
+                        ),
+                      ),
 
-                // TITLE (TETAP)
-                Padding(
-                  padding: const EdgeInsets.only(top: 50),
-                  child: const Text(
-                    'Welcome Back to FWC',
-                    style: TextStyle(color: Colors.white, fontSize: 26),
+                      const SizedBox(height: 25),
+
+                      MyTextField(
+                        controller: _controller.usernameController,
+                        hintText: 'username',
+                        obscureText: false,
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      MyTextField(
+                        controller: _controller.passwordController,
+                        hintText: 'password',
+                        obscureText: _obscurePassword,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      MyButton(onTap: signUserIn),
+                    ],
                   ),
                 ),
-
-                const SizedBox(height: 25),
-
-                // USERNAME
-                MyTextField(
-                  controller: _controller.usernameController,
-                  hintText: 'username',
-                  obscureText: false,
-                ),
-
-                const SizedBox(height: 10),
-
-                // PASSWORD
-                MyTextField(
-                  controller: _controller.passwordController,
-                  hintText: 'password',
-                  obscureText: _obscurePassword,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                // BUTTON
-                MyButton(onTap: signUserIn),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
