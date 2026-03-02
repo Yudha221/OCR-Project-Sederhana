@@ -12,6 +12,8 @@ class Redeem {
   final String cardType;
   final String journeyType;
   final String programType;
+  final String stationId;
+  final String channelCode;
   final int usedQuota;
   final int remainingQuota;
   final int quotaTicket;
@@ -55,6 +57,8 @@ class Redeem {
     required this.seatClassProgram,
     required this.cardId,
     required this.expiredDate,
+    required this.stationId,
+    required this.channelCode,
     required this.passengers,
   });
 
@@ -66,6 +70,7 @@ class Redeem {
     final type = product['type'] ?? {};
     final station = json['station'] ?? {};
     final operator = json['operator'] ?? {};
+    final stationId = json['stationId'] ?? json['station']?['id'] ?? '';
 
     final int remainingQuota =
         int.tryParse(json['remainingQuota']?.toString() ?? '0') ?? 0;
@@ -120,6 +125,8 @@ class Redeem {
       lastRedeem: remainingQuota <= 0,
       passengers: passengers,
       cardId: json['cardId'] ?? '',
+      stationId: stationId,
+      channelCode: '',
       expiredDate: '', // kosong dulu, nanti diisi dari API card
     );
   }
@@ -131,6 +138,7 @@ class Redeem {
     int? masaAktif,
     String? seatClassProgram,
     String? expiredDate,
+    String? channelCode,
   }) {
     return Redeem(
       id: id,
@@ -157,6 +165,8 @@ class Redeem {
       operatorName: operatorName,
       nipKai: nipKai,
       station: station,
+      stationId: stationId,
+      channelCode: channelCode ?? this.channelCode, // 🔥 FIX
       lastRedeem: (remainingQuota ?? this.remainingQuota) <= 0,
       passengers: passengers,
     );

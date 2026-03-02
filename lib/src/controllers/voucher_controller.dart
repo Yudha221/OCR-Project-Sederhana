@@ -31,6 +31,12 @@ class VoucherRedeemController {
 
     final products = await _repo.getCardProducts('VOUCHER');
 
+    // 🔥 Ambil semua station SEKALI SAJA
+    final stations = await _repo.getStations();
+
+    // 🔥 Buat map stationId -> channelCode
+    final stationMap = {for (var s in stations) s.id: s.channelCode};
+
     final enriched = await Future.wait(
       voucherData.map((redeem) async {
         final match = products.firstWhere(
@@ -46,6 +52,7 @@ class VoucherRedeemController {
           ),
         );
 
+        // ================= EXPIRED DATE =================
         String expired = '';
 
         if (redeem.cardId.isNotEmpty) {
@@ -57,7 +64,14 @@ class VoucherRedeemController {
           }
         }
 
-        return redeem.copyWith(price: match.price, expiredDate: expired);
+        // ================= CHANNEL CODE =================
+        final channel = stationMap[redeem.stationId] ?? '';
+
+        return redeem.copyWith(
+          price: match.price,
+          expiredDate: expired,
+          channelCode: channel, // 🔥 TAMBAHKAN INI
+        );
       }),
     );
 

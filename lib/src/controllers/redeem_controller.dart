@@ -27,9 +27,12 @@ class RedeemController {
 
     final products = await _repo.getCardProductsFWC();
 
+    // 🔥 CACHE STATION
+    final Map<String, String> stationCache = {};
+
     final enriched = await Future.wait(
       fwcData.map((redeem) async {
-        // 🔥 Ambil product match (untuk harga dll)
+        // ================= PRODUCT MATCH =================
         final match = products.firstWhere(
           (p) =>
               p.categoryName == redeem.cardCategory &&
@@ -49,12 +52,25 @@ class RedeemController {
 
         final redeemPrice = (pricePerQuota * redeem.usedQuota).round();
 
-        // 🔥 Ambil expiredDate dari API /cards/{id}
+        // ================= EXPIRED DATE =================
         String expired = '';
-
         if (redeem.cardId.isNotEmpty) {
           final card = await _repo.getCardById(redeem.cardId);
           expired = card['expiredDate']?.toString() ?? '';
+        }
+
+        // ================= CHANNEL CODE =================
+        String channel = '';
+
+        if (redeem.stationId.isNotEmpty) {
+          if (stationCache.containsKey(redeem.stationId)) {
+            channel = stationCache[redeem.stationId]!;
+          } else {
+            final station = await _repo.getStationById(redeem.stationId);
+
+            channel = station['channelCode'] ?? '';
+            stationCache[redeem.stationId] = channel;
+          }
         }
 
         return redeem.copyWith(
@@ -63,6 +79,7 @@ class RedeemController {
           masaAktif: match.masaBerlaku,
           seatClassProgram: match.typeName,
           expiredDate: expired,
+          channelCode: channel,
         );
       }),
     );
