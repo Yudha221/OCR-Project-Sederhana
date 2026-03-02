@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.error_outline, color: Colors.red),
+            const Icon(Icons.error_outline, color: Colors.red),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -58,20 +58,16 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ],
         ),
-        content: Text(message, style: const TextStyle(fontSize: 14)),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        content: Text(message),
         actions: [
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF7A1E2D),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
               ),
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK', style: TextStyle(color: Colors.black)),
+              child: const Text('OK', style: TextStyle(color: Colors.white)),
             ),
           ),
         ],
@@ -82,59 +78,79 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // 🔥 INI KUNCINYA
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF7A1E2D),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final isTabletLandscape = constraints.maxWidth > 900;
+
+            /// ===============================
+            /// 📱 HP VERSION (ASLI PUNYA LU)
+            /// ===============================
+            Widget mobileLayout = Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Transform.translate(
+                  offset: const Offset(0, -60),
+                  child: Image.asset(
+                    'assets/images/Whoosh_Member_of_KAI.png',
+                    width: 250,
+                    height: 250,
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                MyTextField(
+                  controller: _controller.usernameController,
+                  hintText: 'username',
+                  obscureText: false,
+                ),
+
+                const SizedBox(height: 10),
+
+                MyTextField(
+                  controller: _controller.passwordController,
+                  hintText: 'password',
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                MyButton(onTap: signUserIn),
+              ],
+            );
+
+            /// ===============================
+            /// 💻 TABLET LANDSCAPE VERSION
+            /// ===============================
+            Widget tabletLayout = ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 700, // 🔥 lebih proper & corporate
+              ),
+              child: mobileLayout,
+            );
+
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Transform.translate(
-                        offset: const Offset(0, -60),
-                        child: Image.asset(
-                          'assets/images/Whoosh_Member_of_KAI.png',
-                          width: 250,
-                          height: 250,
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      MyTextField(
-                        controller: _controller.usernameController,
-                        hintText: 'username',
-                        obscureText: false,
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      MyTextField(
-                        controller: _controller.passwordController,
-                        hintText: 'password',
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      MyButton(onTap: signUserIn),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: isTabletLandscape ? tabletLayout : mobileLayout,
                   ),
                 ),
               ),

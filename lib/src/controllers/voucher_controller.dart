@@ -1,3 +1,4 @@
+import 'package:ocr_project/src/models/card_product.dart';
 import 'package:ocr_project/src/models/station.dart';
 
 import '../models/redeem.dart';
@@ -24,8 +25,24 @@ class VoucherRedeemController {
       page++;
     }
 
-    // 🔒 FINAL LOCK (ANTI NYAMPUR)
-    return allData.where((e) => e.programType == 'VOUCHER').toList();
+    final voucherData = allData
+        .where((e) => e.programType == 'VOUCHER')
+        .toList();
+
+    final products = await _repo.getCardProducts('VOUCHER');
+
+    final enriched = voucherData.map((redeem) {
+      final match = products.firstWhere(
+        (p) =>
+            p.categoryName == redeem.cardCategory &&
+            p.typeName == redeem.cardType,
+        orElse: () => CardProduct(categoryName: '', typeName: '', price: 0),
+      );
+
+      return redeem.copyWith(price: match.price);
+    }).toList();
+
+    return enriched;
   }
 
   // =====================
@@ -50,9 +67,13 @@ class VoucherRedeemController {
   Future<Map<String, dynamic>> redeemVoucher({
     required String serial,
     required String name,
-    required String nik,
+    required String identityNumber,
   }) {
-    return _repo.redeemVoucher(serial: serial, name: name, nik: nik);
+    return _repo.redeemVoucher(
+      serial: serial,
+      name: name,
+      identityNumber: identityNumber,
+    );
   }
 
   // =====================

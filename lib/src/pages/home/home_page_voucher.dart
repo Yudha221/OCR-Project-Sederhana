@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ocr_project/src/services/voucher_pdf_service.dart';
 import 'package:ocr_project/src/utils/role_access.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
@@ -10,6 +11,7 @@ import 'package:ocr_project/src/utils/date_helper.dart';
 import 'package:ocr_project/src/utils/dialog_utils.dart';
 import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
+import 'package:intl/intl.dart';
 
 class HomePageVoucher extends StatefulWidget {
   const HomePageVoucher({super.key});
@@ -56,6 +58,12 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   // pagination
   int currentPage = 1;
   int rowsPerPage = 10;
+
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 2,
+  );
 
   @override
   void initState() {
@@ -228,10 +236,15 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
             ),
 
       body: RefreshIndicator(
-        onRefresh: _loadVoucher, // 🔥
+        onRefresh: _loadVoucher,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.of(context).padding.bottom + 16, //  🔥 SAFE AREA BAWAH
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -253,7 +266,10 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: const Color(0xFF7A1E2D),
-      title: const Text('Voucher', style: TextStyle(color: Colors.white)),
+      title: const Text(
+        'Frequent Whoosher Card - Voucher',
+        style: TextStyle(color: Colors.white),
+      ),
     );
   }
 
@@ -263,7 +279,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
       children: [
         const Expanded(
           child: Text(
-            'Redeem Voucher Management',
+            'Validasi Kuota Voucher',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
@@ -287,7 +303,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('Redeem'),
+            child: const Text('Validasi Voucher'),
           ),
       ],
     );
@@ -334,33 +350,80 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // ================= FILTER =================
   Widget _filterSection() {
-    return FilterButton(
-      categoryItems: voucherCategoryItems,
-      cardTypeItems: voucherTypeItems,
-      stationItems: roleAccess?.lockStation == true ? [] : stationItems,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ===== FILTER AREA =====
+        SizedBox(
+          width: 180, // 👈 atur lebar di sini (150–220 bebas)
+          child: FilterButton(
+            categoryItems: voucherCategoryItems,
+            cardTypeItems: voucherTypeItems,
+            stationItems: roleAccess?.lockStation == true ? [] : stationItems,
 
-      selectedCategories: selectedCategories,
-      selectedCardTypes: selectedCardTypes,
-      selectedStations: selectedStations,
+            selectedCategories: selectedCategories,
+            selectedCardTypes: selectedCardTypes,
+            selectedStations: selectedStations,
 
-      startDate: startDate,
-      endDate: endDate,
+            startDate: startDate,
+            endDate: endDate,
 
-      onCategoryChanged: (v) => selectedCategories = v,
-      onCardTypeChanged: (v) => selectedCardTypes = v,
-      onStationChanged: roleAccess?.lockStation == true
-          ? (_) {}
-          : (v) => selectedStations = v,
+            onCategoryChanged: (v) => selectedCategories = v,
+            onCardTypeChanged: (v) => selectedCardTypes = v,
+            onStationChanged: roleAccess?.lockStation == true
+                ? (_) {}
+                : (v) => selectedStations = v,
 
-      onStartDateChanged: (v) => startDate = v,
-      onEndDateChanged: (v) => endDate = v,
+            onStartDateChanged: (v) => startDate = v,
+            onEndDateChanged: (v) => endDate = v,
 
-      onApply: () {
-        currentPage = 1;
-        setState(_applyFilterAndPagination);
-      },
+            onApply: () {
+              currentPage = 1;
+              setState(_applyFilterAndPagination);
+            },
 
-      onReset: _resetFilter,
+            onReset: _resetFilter,
+          ),
+        ),
+
+        const SizedBox(width: 16),
+
+        // ===== PRINT BUTTON =====
+        Expanded(
+          child: SizedBox(
+            height: 45,
+            child: ElevatedButton(
+              onPressed: filteredData.isEmpty
+                  ? null
+                  : () async {
+                      // ⬅️ WAJIB async
+                      print("Export ditekan");
+
+                      await VoucherReportService.generateReport(
+                        data: filteredData,
+                        station: userStation ?? '-',
+                        operatorName: userName,
+                        shiftDate: DateTime.now(),
+                        userCode: 'hpitintern03',
+                      );
+
+                      print("Export selesai");
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                "Export",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -425,16 +488,22 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
               DataColumn(label: Text('Tanggal Redeem')),
               DataColumn(label: Text('Nama PIC')),
               DataColumn(label: Text('NIK PIC')),
-              DataColumn(label: Text('Nama Pelangan')),
-              DataColumn(label: Text('NIK Pelangan')),
+              DataColumn(label: Text('Nama Pelanggan')),
+              DataColumn(label: Text('NIK Pelanggan')),
               DataColumn(label: Text('Nomor Transaksi')),
               DataColumn(label: Text('Serial Kartu')),
               DataColumn(label: Text('Kategori Kartu')),
-              DataColumn(label: Text('Tipe Kartu')),
-              DataColumn(label: Text('Tipe Perjalanan')),
-              DataColumn(label: Text('Sisa Kuota')),
+              DataColumn(label: Text('kelas')),
               DataColumn(label: Text('Operator')),
               DataColumn(label: Text('Stasiun')),
+              DataColumn(label: Text('NIP KAI')),
+              DataColumn(label: Text('Price Redeem')),
+              DataColumn(label: Text('Seat Class Program')),
+              DataColumn(label: Text('Quota Ticket')),
+              DataColumn(label: Text('Purchase Date')),
+              DataColumn(label: Text('Expired Date')),
+              DataColumn(label: Text('Masa Aktif')),
+              DataColumn(label: Text('Ticketing Channel')),
               DataColumn(label: Text('Aksi')),
             ],
             rows: tableData.map((e) {
@@ -492,78 +561,26 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                         horizontal: 12,
                         vertical: 6,
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+
                       child: Text(
                         e.cardType,
                         style: const TextStyle(
-                          color: Colors.green,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: e.journeyType == 'ROUNDTRIP'
-                            ? const Color(0xFFDCD0F3)
-                            : const Color(0xFFE6D5B8),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        formatJourney(e.journeyType), // 👈 INI KUNCINYA
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: e.journeyType == 'ROUNDTRIP'
-                              ? const Color(0xFF5E35B1)
-                              : const Color(0xFF8B4513),
-                        ),
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Center(
-                      child: SizedBox(
-                        height: 32, // 👈 PAKSA TINGGI BADGE
-                        width: 36, // 👈 BIKIN RAPI & SERAGAM
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: e.remainingQuota <= 0
-                                ? Colors.red.withOpacity(0.15)
-                                : e.remainingQuota <= 2
-                                ? Colors.orange.withOpacity(0.15)
-                                : Colors.green.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            e.remainingQuota.toString(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: e.remainingQuota <= 0
-                                  ? Colors.red
-                                  : e.remainingQuota <= 2
-                                  ? Colors.orange
-                                  : Colors.green,
-                            ),
-                          ),
                         ),
                       ),
                     ),
                   ),
                   DataCell(Text(e.operatorName)),
                   DataCell(Text(e.station)),
-
+                  DataCell(Text(e.nipKai)),
+                  DataCell(Text(currencyFormatter.format(e.price))),
+                  DataCell(Text(e.cardType)),
+                  DataCell(Text(e.quotaTicket.toString())),
+                  DataCell(Text(formatDateOnly(e.redeemDate))),
+                  DataCell(Text('-')),
+                  DataCell(Text('${e.masaAktif} Hari')),
+                  DataCell(Text('-')),
                   // ===== AKSI =====
                   DataCell(
                     OutlinedButton.icon(

@@ -21,3 +21,18 @@ String formatRedeemDate(String? isoDate) {
     return '-';
   }
 }
+
+/// ===============================
+/// FORMAT TANGGAL SAJA
+/// Contoh: 05-02-2026
+/// ===============================
+String formatDateOnly(String? isoDate) {
+  if (isoDate == null || isoDate.isEmpty) return '-';
+
+  try {
+    final date = DateTime.parse(isoDate).toLocal();
+    return DateFormat('dd-MM-yyyy').format(date);
+  } catch (_) {
+    return '-';
+  }
+}
