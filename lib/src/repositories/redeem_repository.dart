@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:ocr_project/src/models/card_category.dart';
+import 'package:ocr_project/src/models/card_product.dart';
 import 'package:ocr_project/src/models/card_type.dart';
 import 'package:ocr_project/src/models/station.dart';
 import '../presentation/api.dart';
@@ -174,5 +175,20 @@ class RedeemRepository {
     final List items = response.data['data']['items'];
 
     return items.map((e) => Station.fromJson(e)).toList();
+  }
+
+  Future<List<CardProduct>> getCardProductsFWC() async {
+    final response = await dio.get(
+      '/card/product',
+      queryParameters: {'programType': 'FWC'},
+    );
+
+    final List items = response.data['data'];
+    return items.map((e) => CardProduct.fromJson(e)).toList();
+  }
+
+  Future<Map<String, dynamic>> getCardById(String id) async {
+    final response = await dio.get('/cards/$id');
+    return response.data['data'];
   }
 }

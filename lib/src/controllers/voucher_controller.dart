@@ -31,16 +31,35 @@ class VoucherRedeemController {
 
     final products = await _repo.getCardProducts('VOUCHER');
 
-    final enriched = voucherData.map((redeem) {
-      final match = products.firstWhere(
-        (p) =>
-            p.categoryName == redeem.cardCategory &&
-            p.typeName == redeem.cardType,
-        orElse: () => CardProduct(categoryName: '', typeName: '', price: 0),
-      );
+    final enriched = await Future.wait(
+      voucherData.map((redeem) async {
+        final match = products.firstWhere(
+          (p) =>
+              p.categoryName == redeem.cardCategory &&
+              p.typeName == redeem.cardType,
+          orElse: () => CardProduct(
+            categoryName: '',
+            typeName: '',
+            price: 0,
+            totalQuota: 0,
+            masaBerlaku: 0,
+          ),
+        );
 
-      return redeem.copyWith(price: match.price);
-    }).toList();
+        String expired = '';
+
+        if (redeem.cardId.isNotEmpty) {
+          try {
+            final card = await _repo.getCardById(redeem.cardId);
+            expired = card['expiredDate']?.toString() ?? '';
+          } catch (_) {
+            expired = '';
+          }
+        }
+
+        return redeem.copyWith(price: match.price, expiredDate: expired);
+      }),
+    );
 
     return enriched;
   }

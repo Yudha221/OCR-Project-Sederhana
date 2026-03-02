@@ -578,7 +578,13 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                   DataCell(Text(e.cardType)),
                   DataCell(Text(e.quotaTicket.toString())),
                   DataCell(Text(formatDateOnly(e.redeemDate))),
-                  DataCell(Text('-')),
+                  DataCell(
+                    Text(
+                      e.expiredDate.isEmpty
+                          ? '-'
+                          : formatDateOnly(e.expiredDate),
+                    ),
+                  ),
                   DataCell(Text('${e.masaAktif} Hari')),
                   DataCell(Text('-')),
                   // ===== AKSI =====

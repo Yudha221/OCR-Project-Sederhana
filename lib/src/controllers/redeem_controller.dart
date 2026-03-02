@@ -1,5 +1,5 @@
 import 'package:ocr_project/src/models/station.dart';
-
+import 'package:ocr_project/src/models/card_product.dart';
 import '../models/redeem.dart';
 import '../repositories/redeem_repository.dart';
 
@@ -13,21 +13,61 @@ class RedeemController {
   // =====================
   Future<List<Redeem>> fetchAllRedeem() async {
     int page = 1;
-    const int limit = 1000; // ambil banyak biar cepat
+    const int limit = 1000;
     List<Redeem> allData = [];
 
     while (true) {
       final data = await _repo.getRedeemList(page: page, limit: limit);
-
       if (data.isEmpty) break;
-
       allData.addAll(data);
       page++;
     }
 
-    return allData
-        .where((e) => e.programType == 'FWC') // ✅ FILTER HERE
-        .toList();
+    final fwcData = allData.where((e) => e.programType == 'FWC').toList();
+
+    final products = await _repo.getCardProductsFWC();
+
+    final enriched = await Future.wait(
+      fwcData.map((redeem) async {
+        // 🔥 Ambil product match (untuk harga dll)
+        final match = products.firstWhere(
+          (p) =>
+              p.categoryName == redeem.cardCategory &&
+              p.typeName == redeem.cardType,
+          orElse: () => CardProduct(
+            categoryName: '',
+            typeName: '',
+            price: 0,
+            totalQuota: 0,
+            masaBerlaku: 0,
+          ),
+        );
+
+        final pricePerQuota = match.totalQuota == 0
+            ? 0
+            : (match.price / match.totalQuota);
+
+        final redeemPrice = (pricePerQuota * redeem.usedQuota).round();
+
+        // 🔥 Ambil expiredDate dari API /cards/{id}
+        String expired = '';
+
+        if (redeem.cardId.isNotEmpty) {
+          final card = await _repo.getCardById(redeem.cardId);
+          expired = card['expiredDate']?.toString() ?? '';
+        }
+
+        return redeem.copyWith(
+          price: redeemPrice,
+          quotaTicket: match.totalQuota,
+          masaAktif: match.masaBerlaku,
+          seatClassProgram: match.typeName,
+          expiredDate: expired,
+        );
+      }),
+    );
+
+    return enriched;
   }
 
   // =====================

@@ -12,6 +12,7 @@ import 'package:ocr_project/src/widgets/my_drawer.dart';
 import 'package:ocr_project/src/models/user.dart';
 import 'dart:convert';
 import 'package:ocr_project/src/utils/role_access.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -59,6 +60,12 @@ class _HomePageState extends State<HomePage> {
   // pagination
   int currentPage = 1;
   int rowsPerPage = 10;
+
+  final NumberFormat currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 2, // pakai 2 kalau mau ,00
+  );
 
   @override
   void initState() {
@@ -237,7 +244,12 @@ class _HomePageState extends State<HomePage> {
         onRefresh: _loadRedeem,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.of(context).padding.bottom + 16, // 🔥 tambah ini
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -297,7 +309,7 @@ class _HomePageState extends State<HomePage> {
     return AppBar(
       backgroundColor: const Color(0xFF7A1E2D),
       title: const Text(
-        'Frequent Whoosher Card',
+        'Frequent Whoosher Card - Voucher',
         style: TextStyle(color: Colors.white),
       ),
     );
@@ -309,7 +321,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         const Expanded(
           child: Text(
-            'Redeem Kuota FWC',
+            'Validasi Kuota FWC',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),
@@ -442,7 +454,14 @@ class _HomePageState extends State<HomePage> {
               DataColumn(label: Text('Sisa Kuota')),
               DataColumn(label: Text('Operator')),
               DataColumn(label: Text('Stasiun')),
-              DataColumn(label: Text('Last Redeem')),
+              DataColumn(label: Text('NIP KAI')),
+              DataColumn(label: Text('Price Redeem')),
+              DataColumn(label: Text('Seat Class Program')),
+              DataColumn(label: Text('Quota Ticket')),
+              DataColumn(label: Text('Purchase Date')),
+              DataColumn(label: Text('Expired Date	')),
+              DataColumn(label: Text('Masa Aktif')),
+              DataColumn(label: Text('Ticketing Channel	')),
               DataColumn(label: Text('Aksi')),
             ],
             rows: tableData.map((e) {
@@ -527,56 +546,20 @@ class _HomePageState extends State<HomePage> {
                   ),
                   DataCell(Text(e.operatorName)),
                   DataCell(Text(e.station)),
+                  DataCell(Text(e.nipKai)),
+                  DataCell(Text(currencyFormatter.format(e.price))),
+                  DataCell(Text('Premium Economy Class')),
+                  DataCell(Text(e.quotaTicket.toString())),
+                  DataCell(Text(formatDateOnly(e.redeemDate))),
                   DataCell(
-                    ElevatedButton(
-                      onPressed: e.lastRedeem
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => LastRedeemPage(
-                                    data: LastRedeem(
-                                      id: e.id,
-                                      name: e.customerName,
-                                      nik: e.identityNumber,
-                                      serialNumber: e.serialNumber,
-                                      programType: e.journeyType,
-                                      cardCategory: e.cardCategory,
-                                      cardType: e.cardType,
-                                      redeemDate: e.redeemDate,
-                                      redeemType: e.journeyType,
-                                      quotaUsed: e.usedQuota,
-                                      remainingQuota: e.remainingQuota,
-                                      station: e.station,
-                                      operatorName: e.operatorName,
-                                      status: e.lastRedeem ? 'Success' : '-',
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: e.lastRedeem
-                            ? Colors.green
-                            : Colors.black,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            8,
-                          ), // 👈 BORDER RADIUS
-                        ),
-                      ),
-                      child: const Text(
-                        'Last Redeem',
-                        style: TextStyle(fontSize: 12),
-                      ),
+                    Text(
+                      e.expiredDate.isEmpty
+                          ? '-'
+                          : formatDateOnly(e.expiredDate),
                     ),
                   ),
+                  DataCell(Text('${e.masaAktif} Hari')),
+                  DataCell(Text('-')),
                   DataCell(
                     OutlinedButton.icon(
                       onPressed: roleAccess?.canDelete == true

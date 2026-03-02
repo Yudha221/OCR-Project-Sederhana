@@ -237,7 +237,12 @@ class _HomePageState extends State<HomePageKai> {
         onRefresh: _loadRedeem,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.of(context).padding.bottom + 16, // 🔥 tambah ini
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -297,7 +302,7 @@ class _HomePageState extends State<HomePageKai> {
     return AppBar(
       backgroundColor: const Color(0xFF7A1E2D),
       title: const Text(
-        'Frequent Whoosher Card',
+        'Frequent Whoosher Card - Voucher',
         style: TextStyle(color: Colors.white),
       ),
     );
@@ -309,7 +314,7 @@ class _HomePageState extends State<HomePageKai> {
       children: [
         const Expanded(
           child: Text(
-            'Redeem Kuota FWC',
+            'Validasi Kuota FWCKAI',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ),

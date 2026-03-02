@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:ocr_project/src/models/card_category.dart';
+import 'package:ocr_project/src/models/card_product.dart';
 import 'package:ocr_project/src/models/card_type.dart';
 import 'package:ocr_project/src/models/station.dart';
 import '../presentation/api.dart';
@@ -68,7 +69,7 @@ class VoucherRepository {
   Future<Map<String, dynamic>> redeemVoucher({
     required String serial,
     required String name,
-    required String nik,
+    required String identityNumber,
   }) async {
     try {
       final response = await dio.post(
@@ -78,7 +79,7 @@ class VoucherRepository {
           'redeemType': 'SINGLE',
           'product': 'VOUCHER',
           'passengerName': name,
-          'passengerNik': nik,
+          'identityNumber': identityNumber,
           'notes': '',
         },
       );
@@ -149,5 +150,22 @@ class VoucherRepository {
     final List items = response.data['data']['items'];
 
     return items.map((e) => Station.fromJson(e)).toList();
+  }
+
+  Future<List<CardProduct>> getCardProducts(String programType) async {
+    final response = await dio.get(
+      '/card/product',
+      queryParameters: {
+        'programType': programType, // 🔥 FILTER DI BACKEND
+      },
+    );
+
+    final List items = response.data['data'];
+    return items.map((e) => CardProduct.fromJson(e)).toList();
+  }
+
+  Future<Map<String, dynamic>> getCardById(String id) async {
+    final response = await dio.get('/cards/$id');
+    return response.data['data'];
   }
 }

@@ -23,6 +23,8 @@ class Redeem {
   final String nipKai;
   final String station;
   final String seatClassProgram;
+  final String cardId;
+  final String expiredDate;
   final bool lastRedeem;
 
   final List<Passenger> passengers;
@@ -51,6 +53,8 @@ class Redeem {
     required this.station,
     required this.lastRedeem,
     required this.seatClassProgram,
+    required this.cardId,
+    required this.expiredDate,
     required this.passengers,
   });
 
@@ -115,6 +119,8 @@ class Redeem {
 
       lastRedeem: remainingQuota <= 0,
       passengers: passengers,
+      cardId: json['cardId'] ?? '',
+      expiredDate: '', // kosong dulu, nanti diisi dari API card
     );
   }
 
@@ -124,6 +130,7 @@ class Redeem {
     int? remainingQuota,
     int? masaAktif,
     String? seatClassProgram,
+    String? expiredDate,
   }) {
     return Redeem(
       id: id,
@@ -137,9 +144,9 @@ class Redeem {
       cardType: cardType,
       journeyType: journeyType,
       programType: programType,
-
+      expiredDate: expiredDate ?? this.expiredDate,
       seatClassProgram: seatClassProgram ?? this.seatClassProgram,
-
+      cardId: cardId,
       usedQuota: usedQuota,
       remainingQuota: remainingQuota ?? this.remainingQuota,
       quotaTicket: quotaTicket ?? this.quotaTicket,
