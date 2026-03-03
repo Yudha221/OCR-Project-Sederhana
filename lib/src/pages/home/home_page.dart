@@ -462,6 +462,7 @@ class _HomePageState extends State<HomePage> {
               DataColumn(label: Text('Expired Date	')),
               DataColumn(label: Text('Masa Aktif')),
               DataColumn(label: Text('Ticketing Channel	')),
+              DataColumn(label: Text('Last Redeem')),
               DataColumn(label: Text('Aksi')),
             ],
             rows: tableData.map((e) {
@@ -559,7 +560,58 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   DataCell(Text('${e.masaAktif} Hari')),
-                  DataCell(Text('-')),
+                  DataCell(Text(e.channelCode.isEmpty ? '-' : e.channelCode)),
+                  DataCell(
+                    ElevatedButton(
+                      onPressed: e.lastRedeem
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LastRedeemPage(
+                                    data: LastRedeem(
+                                      id: e.id,
+                                      name: e.customerName,
+                                      nik: e.identityNumber,
+                                      serialNumber: e.serialNumber,
+                                      programType: e.journeyType,
+                                      cardCategory: e.cardCategory,
+                                      cardType: e.cardType,
+                                      redeemDate: e.redeemDate,
+                                      redeemType: e.journeyType,
+                                      quotaUsed: e.usedQuota,
+                                      remainingQuota: e.remainingQuota,
+                                      quotaTicket: e.quotaTicket,
+                                      station: e.station,
+                                      operatorName: e.operatorName,
+                                      status: e.lastRedeem ? 'Success' : '-',
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: e.lastRedeem
+                            ? Colors.green
+                            : Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // 👈 BORDER RADIUS
+                        ),
+                      ),
+                      child: const Text(
+                        'Last Redeem',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
                   DataCell(
                     OutlinedButton.icon(
                       onPressed: roleAccess?.canDelete == true

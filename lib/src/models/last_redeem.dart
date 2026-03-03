@@ -10,6 +10,7 @@ class LastRedeem {
   final String redeemType;
   final int quotaUsed;
   final int remainingQuota;
+  final int quotaTicket;
   final String station;
   final String operatorName;
   final String status;
@@ -27,6 +28,7 @@ class LastRedeem {
     required this.redeemType,
     required this.quotaUsed,
     required this.remainingQuota,
+    required this.quotaTicket,
     required this.station,
     required this.operatorName,
     required this.status,
@@ -46,6 +48,7 @@ class LastRedeem {
       redeemType: json['redeemType'],
       quotaUsed: json['quotaUsed'],
       remainingQuota: json['remainingQuota'],
+      quotaTicket: json['quotaTicket'] ?? 0,
       station: json['station']['stationName'],
       operatorName: json['operator']['fullName'],
       status: json['status'],
@@ -66,6 +69,7 @@ class LastRedeem {
       redeemType: redeemType,
       quotaUsed: quotaUsed,
       remainingQuota: remainingQuota,
+      quotaTicket: quotaTicket ?? this.quotaTicket,
       station: station,
       operatorName: operatorName,
       status: status,

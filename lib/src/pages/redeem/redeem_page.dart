@@ -522,177 +522,202 @@ class _RedeemPageState extends State<RedeemPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Redeem Kuota')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Redeem Kuota',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
+      appBar: AppBar(title: const Text('Validasi Kuota')),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isTablet = constraints.maxWidth >= 768;
+          final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
-            const Text('Serial Number'),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _serialController,
-              decoration: InputDecoration(
-                hintText: 'Input serial number',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.qr_code_scanner),
-                  onPressed: _isScanning ? null : _openScanner,
-                ),
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isTablet ? 1000 : double.infinity,
               ),
-              onChanged: (_) {
-                if (_isVerified) _resetVerification();
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Scan dari Camera'),
-                onPressed: _isScanning ? null : _openScanner,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: _isVerifying ? null : _verifySerial,
-                child: _isVerifying
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(isTablet ? 32 : 16),
+                child: isTablet && isLandscape
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildMainContent()),
+                          const SizedBox(width: 32),
+                          if (_isVerified) Expanded(child: _buildCardSection()),
+                        ],
                       )
-                    : const Text('Verify Serial Number'),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            const Text('Redeem Type'),
-            RadioListTile<int>(
-              value: 1,
-              groupValue: _redeemType,
-              title: const Text('Single Journey (1 Kuota)'),
-              onChanged: _isVerified
-                  ? (v) => setState(() => _redeemType = v!)
-                  : null,
-            ),
-            RadioListTile<int>(
-              value: 2,
-              groupValue: _redeemType,
-              title: const Text('PP / Round Trip (2 Kuota)'),
-              onChanged: _isVerified
-                  ? (v) => setState(() => _redeemType = v!)
-                  : null,
-            ),
-
-            if (_isVerified) ...[
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity, // 👈 FULL LEBAR
-                child: Card(
-                  elevation: 4, // 👈 agak naik
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16), // 👈 lebih smooth
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20), // 👈 CARD JADI BESAR
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Informasi Kartu',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Divider(height: 24),
-
-                        rowText('Nama Pelanggan', ownerName),
-                        rowText('NIK', ownerNik),
-                        rowText('No. Seri', _serialController.text),
-                        rowText('Category', cardCategory),
-                        rowText('Type', cardType),
-                        rowText('Kuota Terpakai', usedQuotaTotal.toString()),
-                        rowText(
-                          'Status',
-                          cardStatus,
-                          valueColor: cardStatus == 'ACTIVE'
-                              ? Colors.green
-                              : Colors.red,
-                          isBold: true,
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        rowText(
-                          'Sisa Kuota',
-                          remainingQuota.toString(),
-                          labelColor: remainingQuota < 3
-                              ? Colors.red
-                              : Colors.black,
-                          valueColor: remainingQuota < 3
-                              ? Colors.red
-                              : Colors.black,
-                          isBold: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isVerified ? Colors.red : Colors.grey,
-                ),
-                onPressed: (_isVerified && !_isRedeeming) ? _redeem : null,
-                child: _isRedeeming
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Redeem',
-                        style: TextStyle(color: Colors.white),
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildMainContent(),
+                          if (_isVerified) ...[
+                            const SizedBox(height: 24),
+                            _buildCardSection(),
+                          ],
+                        ],
                       ),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildMainContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Redeem Kuota',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 20),
+
+        const Text('Serial Number'),
+        const SizedBox(height: 6),
+
+        TextField(
+          controller: _serialController,
+          decoration: InputDecoration(
+            hintText: 'Input serial number',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: _isScanning ? null : _openScanner,
+            ),
+          ),
+          onChanged: (_) {
+            if (_isVerified) _resetVerification();
+          },
+        ),
+
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Scan dari Camera'),
+            onPressed: _isScanning ? null : _openScanner,
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: _isVerifying ? null : _verifySerial,
+            child: _isVerifying
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Verify Serial Number'),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        const Text('Redeem Type'),
+        RadioListTile<int>(
+          value: 1,
+          groupValue: _redeemType,
+          title: const Text('Single Journey (1 Kuota)'),
+          onChanged: _isVerified
+              ? (v) => setState(() => _redeemType = v!)
+              : null,
+        ),
+        RadioListTile<int>(
+          value: 2,
+          groupValue: _redeemType,
+          title: const Text('PP / Round Trip (2 Kuota)'),
+          onChanged: _isVerified
+              ? (v) => setState(() => _redeemType = v!)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCardSection() {
+    return Column(
+      children: [
+        Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Informasi Kartu',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const Divider(height: 24),
+
+                rowText('Nama Pelanggan', ownerName),
+                rowText('NIK', ownerNik),
+                rowText('No. Seri', _serialController.text),
+                rowText('Category', cardCategory),
+                rowText('Type', cardType),
+                rowText('Kuota Terpakai', usedQuotaTotal.toString()),
+                rowText(
+                  'Status',
+                  cardStatus,
+                  valueColor: cardStatus == 'ACTIVE'
+                      ? Colors.green
+                      : Colors.red,
+                  isBold: true,
+                ),
+
+                const SizedBox(height: 12),
+
+                rowText(
+                  'Sisa Kuota',
+                  remainingQuota.toString(),
+                  labelColor: Colors.red,
+                  valueColor: Colors.red,
+                  isBold: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isVerified ? Colors.red : Colors.grey,
+            ),
+            onPressed: (_isVerified && !_isRedeeming) ? _redeem : null,
+            child: _isRedeeming
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Redeem', style: TextStyle(color: Colors.white)),
+          ),
+        ),
+      ],
     );
   }
 

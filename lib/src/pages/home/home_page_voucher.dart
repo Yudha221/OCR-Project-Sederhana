@@ -148,9 +148,14 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
     filteredData = allData.where((e) {
       final matchSearch =
           searchQuery.isEmpty ||
-          e.customerName.toLowerCase().contains(searchQuery) ||
-          e.identityNumber.contains(searchQuery) ||
-          e.serialNumber.contains(searchQuery);
+          e.customerName.toString().toLowerCase().contains(searchQuery) ||
+          e.identityNumber.toString().toLowerCase().contains(searchQuery) ||
+          e.serialNumber.toString().toLowerCase().contains(searchQuery) ||
+          (e.passengers.isNotEmpty &&
+              e.passengers.first.passengerName
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchQuery));
 
       final matchCategory =
           selectedCategories.isEmpty ||
@@ -576,7 +581,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                   DataCell(Text(e.nipKai)),
                   DataCell(Text(currencyFormatter.format(e.price))),
                   DataCell(Text(e.cardType)),
-                  DataCell(Text(e.quotaTicket.toString())),
+                  DataCell(Text(e.totalQuota.toString())),
                   DataCell(Text(formatDateOnly(e.redeemDate))),
                   DataCell(
                     Text(
@@ -586,7 +591,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                     ),
                   ),
                   DataCell(Text('${e.masaAktif} Hari')),
-                  DataCell(Text('-')),
+                  DataCell(Text(e.channelCode.isEmpty ? '-' : e.channelCode)),
                   // ===== AKSI =====
                   DataCell(
                     OutlinedButton.icon(

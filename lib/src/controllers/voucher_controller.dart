@@ -39,38 +39,42 @@ class VoucherRedeemController {
 
     final enriched = await Future.wait(
       voucherData.map((redeem) async {
-        final match = products.firstWhere(
-          (p) =>
-              p.categoryName == redeem.cardCategory &&
-              p.typeName == redeem.cardType,
-          orElse: () => CardProduct(
-            categoryName: '',
-            typeName: '',
-            price: 0,
-            totalQuota: 0,
-            masaBerlaku: 0,
-          ),
-        );
-
-        // ================= EXPIRED DATE =================
+        int totalQuota = 0;
+        int price = 0;
         String expired = '';
 
         if (redeem.cardId.isNotEmpty) {
           try {
+            // 1️⃣ Ambil card
             final card = await _repo.getCardById(redeem.cardId);
+
             expired = card['expiredDate']?.toString() ?? '';
-          } catch (_) {
-            expired = '';
-          }
+            final productId = card['cardProductId'];
+
+            // 2️⃣ Ambil card product detail
+            if (productId != null) {
+              final productRes = await _repo.dio.get(
+                '/card/product/$productId',
+              );
+
+              final product = productRes.data['data'];
+
+              totalQuota =
+                  int.tryParse(product['totalQuota']?.toString() ?? '0') ?? 0;
+
+              price = int.tryParse(product['price']?.toString() ?? '0') ?? 0;
+            }
+          } catch (_) {}
         }
 
-        // ================= CHANNEL CODE =================
         final channel = stationMap[redeem.stationId] ?? '';
 
         return redeem.copyWith(
-          price: match.price,
+          price: price,
           expiredDate: expired,
-          channelCode: channel, // 🔥 TAMBAHKAN INI
+          channelCode: channel,
+          totalQuota: totalQuota,
+          remainingQuota: redeem.quotaTicket,
         );
       }),
     );
@@ -101,11 +105,13 @@ class VoucherRedeemController {
     required String serial,
     required String name,
     required String identityNumber,
+    required String passengerIdType,
   }) {
     return _repo.redeemVoucher(
       serial: serial,
       name: name,
       identityNumber: identityNumber,
+      passengerIdType: passengerIdType,
     );
   }
 

@@ -14,6 +14,7 @@ class Redeem {
   final String programType;
   final String stationId;
   final String channelCode;
+  final int totalQuota;
   final int usedQuota;
   final int remainingQuota;
   final int quotaTicket;
@@ -44,6 +45,7 @@ class Redeem {
     required this.journeyType,
     required this.programType,
     required this.usedQuota,
+    required this.totalQuota,
     required this.remainingQuota,
     required this.quotaTicket,
     required this.masaAktif,
@@ -109,7 +111,7 @@ class Redeem {
       programType: card['programType'] ?? '-',
 
       usedQuota: quotaUsed,
-      remainingQuota: remainingQuota,
+      remainingQuota: quotaTicket,
       seatClassProgram: '',
       quotaTicket: quotaTicket,
       masaAktif: masaAktif,
@@ -123,6 +125,7 @@ class Redeem {
       station: station['stationName'] ?? '-',
 
       lastRedeem: remainingQuota <= 0,
+      totalQuota: 0,
       passengers: passengers,
       cardId: json['cardId'] ?? '',
       stationId: stationId,
@@ -139,6 +142,7 @@ class Redeem {
     String? seatClassProgram,
     String? expiredDate,
     String? channelCode,
+    int? totalQuota,
   }) {
     return Redeem(
       id: id,
@@ -158,6 +162,7 @@ class Redeem {
       usedQuota: usedQuota,
       remainingQuota: remainingQuota ?? this.remainingQuota,
       quotaTicket: quotaTicket ?? this.quotaTicket,
+      totalQuota: totalQuota ?? this.totalQuota,
       masaAktif: masaAktif ?? this.masaAktif,
       price: price ?? this.price,
       isDeleted: isDeleted,
