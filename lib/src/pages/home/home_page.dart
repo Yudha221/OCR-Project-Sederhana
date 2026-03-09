@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/redeem_controller.dart';
+import 'package:ocr_project/src/controllers/shift_controller.dart';
 import 'package:ocr_project/src/models/last_redeem.dart';
 import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
 import 'package:ocr_project/src/pages/redeem/redeem_page.dart';
 import 'package:ocr_project/src/utils/date_helper.dart';
+import 'package:ocr_project/src/utils/status_awal_colors.dart';
 import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 import 'package:ocr_project/src/models/user.dart';
 import 'dart:convert';
 import 'package:ocr_project/src/utils/role_access.dart';
 import 'package:intl/intl.dart';
+import 'package:ocr_project/src/managers/shift_manager.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,6 +27,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final AuthController _authController = AuthController();
   final RedeemController _redeemController = RedeemController();
+  final ShiftManager _shiftManager = ShiftManager();
 
   // user
   String userName = '';
@@ -70,11 +74,25 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    _shiftManager.init();
+    _shiftManager.addListener(_refreshPage);
+
     _loadUserProfile();
     _loadRedeem();
     _loadCategories();
     _loadCardTypes();
     _loadStations();
+  }
+
+  void _refreshPage() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _shiftManager.removeListener(_refreshPage);
+    super.dispose();
   }
 
   Future<void> _loadStations() async {
@@ -225,6 +243,38 @@ class _HomePageState extends State<HomePage> {
     return DateTime(d.year, d.month, d.day);
   }
 
+  // ================= SHIFT LOCK =================
+  bool _shouldLockPage() {
+    if (roleAccess == null) return false;
+
+    // hanya petugas yang bisa open shift
+    if (!roleAccess!.canOpenShift) return false;
+
+    // kalau petugas tapi belum open shift → kunci
+    return !_shiftManager.isOpen;
+  }
+
+  Widget _buildShiftLockedView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.lock_outline, size: 110, color: Colors.grey.shade400),
+          const SizedBox(height: 20),
+          const Text(
+            "Shift Belum Dibuka",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Silakan Open Shift di menu drawer",
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
@@ -236,71 +286,66 @@ class _HomePageState extends State<HomePage> {
           : MyDrawer(
               userName: userName,
               roleName: roleName,
-              roleAccess: roleAccess!, // 🔥 INI KUNCI
+              roleAccess: roleAccess!,
             ),
-
       // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
-      body: RefreshIndicator(
-        onRefresh: _loadRedeem,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            MediaQuery.of(context).padding.bottom + 16, // 🔥 tambah ini
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _titleSection(),
-              const SizedBox(height: 16),
-              _searchSection(),
-              const SizedBox(height: 16),
-              FilterButton(
-                categoryItems: categoryItems,
-                cardTypeItems: cardTypeItems,
-                stationItems: roleAccess?.lockStation == true
-                    ? []
-                    : stationItems,
-
-                selectedCategories: selectedCategories,
-                selectedCardTypes: selectedCardTypes,
-                selectedStations: selectedStations,
-
-                startDate: startDate,
-                endDate: endDate,
-
-                onCategoryChanged: (v) {
-                  setState(() => selectedCategories = v);
-                },
-                onCardTypeChanged: (v) {
-                  setState(() => selectedCardTypes = v);
-                },
-                onStationChanged: roleAccess?.lockStation == true
-                    ? (_) {}
-                    : (v) => setState(() => selectedStations = v),
-
-                onStartDateChanged: (d) {
-                  setState(() => startDate = d);
-                },
-                onEndDateChanged: (d) {
-                  setState(() => endDate = d);
-                },
-
-                onReset: _resetFilter,
-                onApply: () {
-                  currentPage = 1;
-                  setState(_applyFilterAndPagination);
-                },
+      body: _shouldLockPage()
+          ? _buildShiftLockedView()
+          : RefreshIndicator(
+              onRefresh: _loadRedeem,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  MediaQuery.of(context).padding.bottom + 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _titleSection(),
+                    const SizedBox(height: 16),
+                    _searchSection(),
+                    const SizedBox(height: 16),
+                    FilterButton(
+                      categoryItems: categoryItems,
+                      cardTypeItems: cardTypeItems,
+                      stationItems: roleAccess?.lockStation == true
+                          ? []
+                          : stationItems,
+                      selectedCategories: selectedCategories,
+                      selectedCardTypes: selectedCardTypes,
+                      selectedStations: selectedStations,
+                      startDate: startDate,
+                      endDate: endDate,
+                      onCategoryChanged: (v) {
+                        setState(() => selectedCategories = v);
+                      },
+                      onCardTypeChanged: (v) {
+                        setState(() => selectedCardTypes = v);
+                      },
+                      onStationChanged: roleAccess?.lockStation == true
+                          ? (_) {}
+                          : (v) => setState(() => selectedStations = v),
+                      onStartDateChanged: (d) {
+                        setState(() => startDate = d);
+                      },
+                      onEndDateChanged: (d) {
+                        setState(() => endDate = d);
+                      },
+                      onReset: _resetFilter,
+                      onApply: () {
+                        currentPage = 1;
+                        setState(_applyFilterAndPagination);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    _tableSection(),
+                  ],
+                ),
               ),
-
-              const SizedBox(height: 20),
-              _tableSection(),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -442,28 +487,32 @@ class _HomePageState extends State<HomePage> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Tanggal Redeem')),
-              DataColumn(label: Text('Nama Pelanggan')),
-              DataColumn(label: Text('NIK')),
-              DataColumn(label: Text('Nomor Transaksi')),
-              DataColumn(label: Text('Serial Kartu')),
-              DataColumn(label: Text('Kategori Kartu')),
-              DataColumn(label: Text('Tipe Kartu')),
-              DataColumn(label: Text('Tipe Perjalanan')),
-              DataColumn(label: Text('Sisa Kuota')),
-              DataColumn(label: Text('Operator')),
-              DataColumn(label: Text('Stasiun')),
-              DataColumn(label: Text('NIP KAI')),
-              DataColumn(label: Text('Price Redeem')),
-              DataColumn(label: Text('Seat Class Program')),
-              DataColumn(label: Text('Quota Ticket')),
-              DataColumn(label: Text('Purchase Date')),
-              DataColumn(label: Text('Expired Date	')),
-              DataColumn(label: Text('Masa Aktif')),
-              DataColumn(label: Text('Ticketing Channel	')),
-              DataColumn(label: Text('Last Redeem')),
-              DataColumn(label: Text('Aksi')),
+            columns: [
+              const DataColumn(label: Text('Tanggal Redeem')),
+              const DataColumn(label: Text('Nama Pelanggan')),
+              const DataColumn(label: Text('NIK')),
+              const DataColumn(label: Text('Nomor Redeem')),
+              const DataColumn(label: Text('Nomor Transaksi')),
+              const DataColumn(label: Text('Status Asal')),
+              const DataColumn(label: Text('Serial Kartu')),
+              const DataColumn(label: Text('Kategori Kartu')),
+              const DataColumn(label: Text('Tipe Kartu')),
+              const DataColumn(label: Text('Tipe Perjalanan')),
+              const DataColumn(label: Text('Sisa Kuota')),
+              const DataColumn(label: Text('Operator Utama')),
+              const DataColumn(label: Text('Operator Pengganti')),
+              const DataColumn(label: Text('Stasiun')),
+              const DataColumn(label: Text('NIP KAI')),
+              const DataColumn(label: Text('Price Redeem')),
+              const DataColumn(label: Text('Seat Class Program')),
+              const DataColumn(label: Text('Quota Ticket')),
+              const DataColumn(label: Text('Purchase Date')),
+              const DataColumn(label: Text('Expired Date	')),
+              const DataColumn(label: Text('Masa Aktif')),
+              const DataColumn(label: Text('Ticketing Channel	')),
+              const DataColumn(label: Text('Last Redeem')),
+              if (roleAccess?.canDelete == true)
+                const DataColumn(label: Text('Aksi')),
             ],
             rows: tableData.map((e) {
               return DataRow(
@@ -471,7 +520,35 @@ class _HomePageState extends State<HomePage> {
                   DataCell(Text(formatRedeemDate(e.redeemDate))),
                   DataCell(Text(e.customerName)),
                   DataCell(Text(e.identityNumber)),
+                  DataCell(Text(e.redeemNumber)),
                   DataCell(Text(e.transactionNumber)),
+                  DataCell(
+                    Builder(
+                      builder: (_) {
+                        final origin = e.ticketOrigin.trim();
+                        final color = StatusColors.getTicketOriginColor(origin);
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            origin.isEmpty ? '-' : origin,
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                   DataCell(Text(e.serialNumber)),
                   DataCell(
                     Container(
@@ -524,14 +601,6 @@ class _HomePageState extends State<HomePage> {
                         horizontal: 10,
                         vertical: 6,
                       ),
-                      decoration: BoxDecoration(
-                        color: e.remainingQuota <= 0
-                            ? Colors.red.withOpacity(0.15)
-                            : e.remainingQuota <= 2
-                            ? Colors.orange.withOpacity(0.15)
-                            : Colors.green.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
                       child: Text(
                         e.remainingQuota.toString(),
                         style: TextStyle(
@@ -546,6 +615,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   DataCell(Text(e.operatorName)),
+                  DataCell(Text(e.secondaryOperatorName)),
                   DataCell(Text(e.station)),
                   DataCell(Text(e.nipKai)),
                   DataCell(Text(currencyFormatter.format(e.price))),
@@ -560,7 +630,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   DataCell(Text('${e.masaAktif} Hari')),
-                  DataCell(Text(e.channelCode.isEmpty ? '-' : e.channelCode)),
+                  DataCell(Text(e.channelName.isEmpty ? '-' : e.channelName)),
                   DataCell(
                     ElevatedButton(
                       onPressed: e.lastRedeem
@@ -584,7 +654,9 @@ class _HomePageState extends State<HomePage> {
                                       quotaTicket: e.quotaTicket,
                                       station: e.station,
                                       operatorName: e.operatorName,
-                                      status: e.lastRedeem ? 'Success' : '-',
+                                      status: e.status,
+                                      photoUrl:
+                                          'https://rewards-dev.kcic.co.id/api/storage/lastredeem/${e.memberId}/${e.id}.jpg',
                                     ),
                                   ),
                                 ),
@@ -612,36 +684,34 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  DataCell(
-                    OutlinedButton.icon(
-                      onPressed: roleAccess?.canDelete == true
-                          ? () => _confirmDelete(e.id)
-                          : null,
-
-                      icon: const Icon(
-                        Icons.delete,
-                        size: 16,
-                        color: Colors.red,
-                      ),
-                      label: const Text(
-                        'Hapus',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: Colors.red, // 👈 warna border
-                          width: 1.5, // 👈 tebal border
+                  if (roleAccess?.canDelete == true)
+                    DataCell(
+                      OutlinedButton.icon(
+                        onPressed: () => _confirmDelete(e.id),
+                        icon: const Icon(
+                          Icons.delete,
+                          size: 16,
+                          color: Colors.red,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // 👈 radius
+                        label: const Text(
+                          'Hapus',
+                          style: TextStyle(color: Colors.red),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Colors.red, // 👈 warna border
+                            width: 1.5, // 👈 tebal border
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8), // 👈 radius
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               );
             }).toList(),
@@ -679,6 +749,11 @@ class _HomePageState extends State<HomePage> {
   void _confirmDelete(String id) {
     final TextEditingController noteController = TextEditingController();
     final TextEditingController bookingController = TextEditingController();
+    final TextEditingController trainNumberController = TextEditingController();
+    final TextEditingController ticketNumberController =
+        TextEditingController();
+
+    DateTime? departureDate;
     final formKey = GlobalKey<FormState>();
     String? selectedReason;
 
@@ -690,88 +765,225 @@ class _HomePageState extends State<HomePage> {
           builder: (context, setModalState) {
             return Form(
               key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Yakin ingin menghapus data ini? Aksi ini memerlukan alasan penghapusan.',
-                  ),
-                  const SizedBox(height: 16),
-
-                  /// 🔽 DROPDOWN ALASAN
-                  DropdownButtonFormField<String>(
-                    value: selectedReason,
-                    decoration: const InputDecoration(
-                      labelText: 'Alasan Penghapusan',
-                      border: OutlineInputBorder(),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Yakin ingin menghapus data ini? Aksi ini memerlukan alasan penghapusan.',
                     ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Salah input nomor seri kartu',
-                        child: Text('Salah input nomor seri kartu'),
+                    const SizedBox(height: 16),
+
+                    /// DROPDOWN ALASAN
+                    DropdownButtonFormField<String>(
+                      value: selectedReason,
+                      decoration: const InputDecoration(
+                        labelText: 'Alasan Penghapusan',
+                        border: OutlineInputBorder(),
                       ),
-                      DropdownMenuItem(
-                        value: 'Pembatalan Kereta',
-                        child: Text('Pembatalan Kereta'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Salah input nomor seri kartu',
+                          child: Text('Salah input nomor seri kartu'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Pembatalan Kereta',
+                          child: Text('Pembatalan Kereta'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Lainnya',
+                          child: Text('Lainnya'),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        setModalState(() {
+                          selectedReason = v;
+
+                          /// reset semua field
+                          noteController.clear();
+                          bookingController.clear();
+                          trainNumberController.clear();
+                          ticketNumberController.clear();
+                          departureDate = null;
+                        });
+                      },
+                      validator: (v) =>
+                          v == null ? 'Alasan wajib dipilih' : null,
+                    ),
+
+                    /// ==============================
+                    /// PEMBATALAN KERETA
+                    /// ==============================
+                    if (selectedReason == 'Pembatalan Kereta') ...[
+                      const SizedBox(height: 12),
+
+                      /// KODE BOOKING
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Kode Booking Kereta",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: bookingController,
+                            decoration: const InputDecoration(
+                              hintText: "Masukkan kode booking",
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Kode booking wajib diisi';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
-                      DropdownMenuItem(
-                        value: 'Lainnya',
-                        child: Text('Lainnya'),
+
+                      const SizedBox(height: 12),
+
+                      /// NOMOR KA
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Nomor KA",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: trainNumberController,
+                            decoration: const InputDecoration(
+                              hintText: "Contoh: G1234",
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Nomor KA wajib diisi';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      /// NOMOR TIKET
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Nomor Tiket",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: ticketNumberController,
+                            decoration: const InputDecoration(
+                              hintText: "Masukkan nomor tiket",
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Nomor tiket wajib diisi';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      /// TANGGAL KEBERANGKATAN
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Tanggal Keberangkatan",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                              );
+
+                              if (picked != null) {
+                                setModalState(() {
+                                  departureDate = picked;
+                                });
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                hintText: "Pilih tanggal keberangkatan",
+                                border: OutlineInputBorder(),
+                              ),
+                              child: Text(
+                                departureDate == null
+                                    ? "Pilih tanggal keberangkatan"
+                                    : DateFormat(
+                                        'dd MMM yyyy',
+                                      ).format(departureDate!),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                    onChanged: (v) {
-                      setModalState(() {
-                        selectedReason = v;
-                        noteController.clear();
-                        bookingController.clear();
-                      });
-                    },
-                    validator: (v) => v == null ? 'Alasan wajib dipilih' : null,
-                  ),
 
-                  /// ✍️ INPUT UNTUK PEMBATALAN KERETA
-                  if (selectedReason == 'Pembatalan Kereta') ...[
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: bookingController,
-                      decoration: const InputDecoration(
-                        labelText: 'Kode Booking Kereta',
-                        hintText: 'Masukkan kode booking',
-                        border: OutlineInputBorder(),
+                    /// ==============================
+                    /// ALASAN LAINNYA
+                    /// ==============================
+                    if (selectedReason == 'Lainnya') ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: noteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Alasan Lainnya',
+                          hintText: 'Masukkan alasan penghapusan',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Alasan wajib diisi';
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Kode booking wajib diisi';
-                        }
-                        return null;
-                      },
-                    ),
+                    ],
                   ],
-
-                  /// ✍️ INPUT UNTUK LAINNYA
-                  if (selectedReason == 'Lainnya') ...[
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: noteController,
-                      decoration: const InputDecoration(
-                        labelText: 'Alasan Lainnya',
-                        hintText: 'Masukkan alasan penghapusan',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 2,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Alasan wajib diisi';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ],
+                ),
               ),
             );
           },
         ),
+
+        /// ==============================
+        /// BUTTONS
+        /// ==============================
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -783,12 +995,25 @@ class _HomePageState extends State<HomePage> {
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
 
+              if (selectedReason == 'Pembatalan Kereta' &&
+                  departureDate == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Tanggal keberangkatan wajib dipilih"),
+                  ),
+                );
+                return;
+              }
+
               late final String note;
 
               if (selectedReason == 'Pembatalan Kereta') {
                 note =
                     'Alasan : Pembatalan Kereta\n'
-                    'Kode Booking : ${bookingController.text.trim()}';
+                    'Kode Booking : ${bookingController.text.trim()}\n'
+                    'Nomor KA : ${trainNumberController.text.trim()}\n'
+                    'Nomor Tiket : ${ticketNumberController.text.trim()}\n'
+                    'Tanggal Keberangkatan : ${DateFormat('dd-MM-yyyy').format(departureDate!)}';
               } else if (selectedReason == 'Lainnya') {
                 note =
                     'Alasan : Lainnya\n'
@@ -797,19 +1022,21 @@ class _HomePageState extends State<HomePage> {
                 note = 'Alasan : $selectedReason';
               }
 
+              FocusScope.of(context).unfocus();
               Navigator.pop(context);
+
               setState(() => isLoading = true);
 
               try {
                 final result = await _redeemController.deleteRedeem(
                   id: id,
                   note: note,
-                  deletedBy: userName,
                 );
 
                 await _loadRedeem();
 
                 if (!mounted) return;
+
                 _showInfoDialog(
                   title: result['success'] == true ? 'Berhasil' : 'Gagal',
                   message: result['message'] ?? '',

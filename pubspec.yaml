@@ -26,6 +26,7 @@ dependencies:
   shared_preferences: ^2.5.4
   path_provider: ^2.1.5
   open_filex: ^4.7.0
+  dropdown_button2: ^2.3.9
 
 dev_dependencies:
   flutter_test:

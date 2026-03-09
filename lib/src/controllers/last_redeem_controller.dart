@@ -7,12 +7,18 @@ import 'package:ocr_project/src/repositories/last_redeem_repository.dart';
 class LastRedeemController {
   final LastRedeemRepository _repository = LastRedeemRepository();
 
-  Future<LastRedeem?> fetchLastRedeem() async {
+  Future<LastRedeem?> fetchLastRedeem(String redeemId) async {
     final response = await _repository.fetchLastRedeem();
     final items = response.data['data']['items'] as List;
 
-    if (items.isEmpty) return null;
-    return LastRedeem.fromJson(items.first);
+    final match = items.firstWhere(
+      (e) => e['id'] == redeemId,
+      orElse: () => null,
+    );
+
+    if (match == null) return null;
+
+    return LastRedeem.fromJson(match);
   }
 
   /// ✅ upload foto & dapet URL

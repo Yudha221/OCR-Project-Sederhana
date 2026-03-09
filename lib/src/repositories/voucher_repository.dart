@@ -70,6 +70,7 @@ class VoucherRepository {
     required String serial,
     required String name,
     required String identityNumber,
+    required String passengerIdType,
   }) async {
     try {
       final response = await dio.post(
@@ -79,7 +80,8 @@ class VoucherRepository {
           'redeemType': 'SINGLE',
           'product': 'VOUCHER',
           'passengerName': name,
-          'identityNumber': identityNumber,
+          'passengerNik': identityNumber,
+          'passengerIdType': passengerIdType,
           'notes': '',
         },
       );

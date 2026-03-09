@@ -14,7 +14,7 @@ class LastRedeem {
   final String station;
   final String operatorName;
   final String status;
-  final String? photoUrl;
+  final String? photoUrl; // ✅ ini yang kurang
 
   LastRedeem({
     required this.id,
@@ -36,6 +36,12 @@ class LastRedeem {
   });
 
   factory LastRedeem.fromJson(Map<String, dynamic> json) {
+    final memberId = json['card']['member']['id'];
+    final redeemId = json['id'];
+
+    final photoUrl =
+        'https://rewards-dev.kcic.co.id/api/storage/lastredeem/$memberId/$redeemId.jpg';
+
     return LastRedeem(
       id: json['id'].toString(),
       name: json['card']['member']['name'],
@@ -52,7 +58,7 @@ class LastRedeem {
       station: json['station']['stationName'],
       operatorName: json['operator']['fullName'],
       status: json['status'],
-      photoUrl: json['photoUrl'], // ⬅️ dari backend
+      photoUrl: photoUrl, // ✅ sekarang benar
     );
   }
 
@@ -69,7 +75,7 @@ class LastRedeem {
       redeemType: redeemType,
       quotaUsed: quotaUsed,
       remainingQuota: remainingQuota,
-      quotaTicket: quotaTicket ?? this.quotaTicket,
+      quotaTicket: quotaTicket,
       station: station,
       operatorName: operatorName,
       status: status,

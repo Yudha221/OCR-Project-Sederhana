@@ -1,17 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:ocr_project/src/controllers/voucher_delete_controller.dart';
-import 'package:ocr_project/src/models/redeem.dart';
+import 'package:ocr_project/src/models/pembatalan_kereta.dart';
 import 'package:ocr_project/src/utils/date_helper.dart';
+import 'package:ocr_project/src/widgets/my_drawer.dart';
+import 'package:ocr_project/src/utils/role_access.dart';
 
-class HistoryDeleteVoucherPage extends StatefulWidget {
-  const HistoryDeleteVoucherPage({super.key});
+class PembatalanKeretaPageVoucher extends StatefulWidget {
+  final String userName;
+  final String roleName;
+  final RoleAccess roleAccess;
+
+  const PembatalanKeretaPageVoucher({
+    super.key,
+    required this.userName,
+    required this.roleName,
+    required this.roleAccess,
+  });
 
   @override
-  State<HistoryDeleteVoucherPage> createState() =>
+  State<PembatalanKeretaPageVoucher> createState() =>
       _HistoryDeleteVoucherPageState();
 }
 
-class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
+class _HistoryDeleteVoucherPageState
+    extends State<PembatalanKeretaPageVoucher> {
   final controller = VoucherDeleteController();
   final searchCtrl = TextEditingController();
 
@@ -41,7 +53,27 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xffF7F8FA),
-      appBar: AppBar(title: const Text('Riwayat Penghapusan Voucher')),
+
+      drawer: MyDrawer(
+        userName: widget.userName,
+        roleName: widget.roleName,
+        roleAccess: widget.roleAccess,
+      ),
+
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: const Color(0xFF7A1E2D),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: const Text(
+          'Riwayat Pembatalan Voucher',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -107,123 +139,83 @@ class _HistoryDeleteVoucherPageState extends State<HistoryDeleteVoucherPage> {
                             Colors.red.shade50,
                           ),
                           columns: const [
-                            DataColumn(label: Text('Tanggal Dihapus')),
+                            DataColumn(label: Text('Tanggal Pembatalan')),
                             DataColumn(label: Text('Nama PIC')),
                             DataColumn(label: Text('NIK PIC')),
                             DataColumn(label: Text('Nama Pelanggan')),
                             DataColumn(label: Text('NIK Pelanggan')),
+                            DataColumn(label: Text('Nomor Orisinal Redeem')),
+                            DataColumn(label: Text('Nomor Pembatalan Redeem')),
                             DataColumn(label: Text('Nomor Transaksi')),
-                            DataColumn(label: Text('Serial Voucher')),
-                            DataColumn(label: Text('Kategori')),
-                            DataColumn(label: Text('Tipe Voucher')),
-                            DataColumn(label: Text('Sisa Kuota')),
-                            DataColumn(label: Text('Perjalanan')),
-                            DataColumn(label: Text('Operator')),
+                            DataColumn(label: Text('Status Pembatalan')),
+                            DataColumn(label: Text('Status Awal')),
+                            DataColumn(label: Text('Serial Kartu')),
+                            DataColumn(label: Text('Kategori Kartu')),
+                            DataColumn(label: Text('Kelas')),
+                            DataColumn(label: Text('Operator Utama')),
+                            DataColumn(label: Text('Operator Pengganti')),
                             DataColumn(label: Text('Stasiun')),
-                            DataColumn(label: Text('Alasan Hapus')),
+                            DataColumn(label: Text('NIP KAI')),
+                            DataColumn(label: Text('Price Redeem')),
+                            DataColumn(label: Text('Seat Class Program')),
+                            DataColumn(label: Text('Quota Ticket')),
+                            DataColumn(label: Text('Purchase Date')),
+                            DataColumn(label: Text('Expired Date')),
+                            DataColumn(label: Text('Masa Aktif')),
+                            DataColumn(label: Text('Ticketing Channel')),
                           ],
-                          rows: controller.tableData.map<DataRow>((Redeem e) {
+                          rows: controller.tableData.map<DataRow>((
+                            PembatalanKereta e,
+                          ) {
                             return DataRow(
                               cells: [
-                                // Tanggal Dihapus
-                                DataCell(Text(formatDeleteDate(e.updatedAt))),
+                                DataCell(Text(formatDeleteDate(e.deletedAt))),
 
-                                // Nama Pelanggan
-                                DataCell(Text(e.customerName)),
-
-                                // NIK
-                                DataCell(Text(e.identityNumber)),
-
-                                // Nama Pelanggan
-                                DataCell(
-                                  Text(
-                                    e.passengers.isNotEmpty &&
-                                            e.passengers.first.passengerName
-                                                .trim()
-                                                .isNotEmpty
-                                        ? e.passengers.first.passengerName
-                                        : '-',
-                                  ),
-                                ),
-
-                                // NIK Pelanggan
-                                DataCell(
-                                  Text(
-                                    e.passengers.isNotEmpty &&
-                                            e.passengers.first.nik
-                                                .trim()
-                                                .isNotEmpty
-                                        ? e.passengers.first.nik
-                                        : '-',
-                                  ),
-                                ),
-
-                                // Nomor Transaksi
-                                DataCell(Text(e.transactionNumber)),
-
-                                // Serial Voucher
-                                DataCell(Text(e.serialNumber)),
-
-                                // Kategori
-                                DataCell(_categoryBadge(e.cardCategory)),
-
-                                // Tipe Voucher
-                                DataCell(Text(e.cardType)),
-
-                                DataCell(_quotaBadge(e.remainingQuota)),
-
-                                // Perjalanan
-                                DataCell(_journeyBadge(e.journeyType)),
-
-                                // Operator
                                 DataCell(Text(e.operatorName)),
 
-                                // Stasiun
-                                DataCell(Text(e.station)),
+                                DataCell(Text(e.operatorNip)),
 
-                                // Alasan Hapus
-                                DataCell(
-                                  e.note.isNotEmpty && e.note != '-'
-                                      ? TextButton(
-                                          style: TextButton.styleFrom(
-                                            foregroundColor: Colors.red,
-                                            side: const BorderSide(
-                                              color: Colors.red,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 6,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          onPressed: () => _showReasonDialog(
-                                            context,
-                                            e.note,
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: const [
-                                              Text(
-                                                'Lihat Alasan',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Tanpa Alasan',
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                ),
+                                DataCell(Text(e.customerName)),
+
+                                DataCell(Text(e.identityNumber)),
+
+                                DataCell(Text(e.redeemNumber)),
+
+                                DataCell(Text(e.redeemCancelledNumber ?? '-')),
+
+                                DataCell(Text(e.transactionNumber)),
+
+                                DataCell(Text(e.cancelReason ?? '-')),
+
+                                DataCell(Text(e.ticketOrigin ?? '-')),
+
+                                DataCell(Text(e.serialNumber)),
+
+                                DataCell(_categoryBadge(e.cardCategory)),
+
+                                DataCell(Text(e.cardType)),
+
+                                DataCell(Text(e.operatorName)),
+
+                                DataCell(Text(e.secondaryOperatorName ?? '-')),
+
+                                DataCell(Text(e.stationName)),
+
+                                DataCell(Text(e.operatorNip)),
+
+                                DataCell(Text(formatRupiah(e.price))),
+
+                                DataCell(Text(e.cardType)),
+
+                                DataCell(Text('${e.quotaTicket}')),
+
+                                DataCell(Text(formatDateOnly(e.purchaseDate))),
+
+                                DataCell(Text(formatDateOnly(e.expiredDate))),
+
+                                DataCell(Text('${e.masaBerlaku} Hari')),
+
+                                DataCell(Text(e.paymentChannel)),
                               ],
                             );
                           }).toList(),

@@ -1,42 +1,35 @@
 import '../repositories/voucher_delete_repository.dart';
-import '../models/redeem.dart';
+import '../models/pembatalan_kereta.dart';
 
 class VoucherDeleteController {
   final VoucherDeleteRepository _repo = VoucherDeleteRepository();
 
   bool isLoading = false;
 
-  // pagination (CLIENT SIDE)
   int currentPage = 1;
   int rowsPerPage = 10;
 
-  // ✅ PAKAI MODEL
-  List<Redeem> allData = [];
-  List<Redeem> filteredData = [];
-  List<Redeem> tableData = [];
+  List<PembatalanKereta> allData = [];
+  List<PembatalanKereta> filteredData = [];
+  List<PembatalanKereta> tableData = [];
 
   Future<void> load() async {
     isLoading = true;
 
     try {
       final res = await _repo.fetchVoucherDelete(limit: 1000);
-      final raw = res.data;
+      final result = res.data['data'];
 
-      if (raw is Map && raw['data'] is Map && raw['data']['items'] is List) {
-        // 🔥 FILTER FINAL: HANYA VOUCHER
-        allData = (raw['data']['items'] as List)
-            .where(
-              (e) =>
-                  e['product'] == 'VOUCHER' ||
-                  e['card']?['programType'] == 'VOUCHER',
-            )
-            .map<Redeem>((e) => Redeem.fromJson(e))
-            .toList();
-      } else {
-        allData = [];
-      }
+      final List items = result['items'];
 
-      filteredData = [];
+      /// 🔥 FILTER KHUSUS VOUCHER
+      allData = items
+          .map((e) => PembatalanKereta.fromJson(e))
+          .where((e) => e.programType == 'VOUCHER')
+          .toList();
+
+      filteredData = allData;
+
       currentPage = 1;
       _applyPagination();
     } catch (e) {
@@ -48,7 +41,7 @@ class VoucherDeleteController {
     isLoading = false;
   }
 
-  // ================= SEARCH =================
+  /// ================= SEARCH =================
   void search(String keyword) {
     final key = keyword.toLowerCase();
 
@@ -56,7 +49,7 @@ class VoucherDeleteController {
       return e.transactionNumber.toLowerCase().contains(key) ||
           e.serialNumber.toLowerCase().contains(key) ||
           e.operatorName.toLowerCase().contains(key) ||
-          e.station.toLowerCase().contains(key) ||
+          e.stationName.toLowerCase().contains(key) ||
           e.customerName.toLowerCase().contains(key);
     }).toList();
 
@@ -64,21 +57,14 @@ class VoucherDeleteController {
     _applyPagination();
   }
 
-  // ================= PAGINATION =================
+  /// ================= PAGINATION =================
   void _applyPagination() {
-    final source = filteredData.isNotEmpty ? filteredData : allData;
-
-    if (source.isEmpty) {
-      tableData = [];
-      return;
-    }
-
     final start = (currentPage - 1) * rowsPerPage;
     final end = start + rowsPerPage;
 
-    tableData = source.sublist(
+    tableData = filteredData.sublist(
       start,
-      end > source.length ? source.length : end,
+      end > filteredData.length ? filteredData.length : end,
     );
   }
 
@@ -96,9 +82,5 @@ class VoucherDeleteController {
     }
   }
 
-  int get totalPage =>
-      ((filteredData.isNotEmpty ? filteredData.length : allData.length) /
-              rowsPerPage)
-          .ceil()
-          .clamp(1, 999);
+  int get totalPage => (filteredData.length / rowsPerPage).ceil().clamp(1, 999);
 }

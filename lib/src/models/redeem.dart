@@ -13,7 +13,7 @@ class Redeem {
   final String journeyType;
   final String programType;
   final String stationId;
-  final String channelCode;
+  final String channelName;
   final int totalQuota;
   final int usedQuota;
   final int remainingQuota;
@@ -22,18 +22,25 @@ class Redeem {
   final int price;
   final bool isDeleted;
   final String note;
+  final String redeemNumber;
+  final String status;
   final String operatorName;
+  final String secondaryOperatorName;
   final String nipKai;
   final String station;
   final String seatClassProgram;
   final String cardId;
   final String expiredDate;
+  final String ticketOrigin;
   final bool lastRedeem;
+  final String memberId;
 
   final List<Passenger> passengers;
 
   Redeem({
     required this.id,
+    required this.redeemNumber,
+    required this.status,
     required this.redeemDate,
     required this.updatedAt,
     required this.customerName,
@@ -53,14 +60,17 @@ class Redeem {
     required this.isDeleted,
     required this.note,
     required this.operatorName,
+    required this.secondaryOperatorName,
     required this.nipKai,
     required this.station,
     required this.lastRedeem,
+    required this.memberId,
     required this.seatClassProgram,
     required this.cardId,
     required this.expiredDate,
     required this.stationId,
-    required this.channelCode,
+    required this.ticketOrigin,
+    required this.channelName,
     required this.passengers,
   });
 
@@ -72,6 +82,7 @@ class Redeem {
     final type = product['type'] ?? {};
     final station = json['station'] ?? {};
     final operator = json['operator'] ?? {};
+    final secondaryOperator = json['secondaryOperator'] ?? {};
     final stationId = json['stationId'] ?? json['station']?['id'] ?? '';
 
     final int remainingQuota =
@@ -95,9 +106,11 @@ class Redeem {
 
     return Redeem(
       id: json['id']?.toString() ?? '',
+      redeemNumber: json['redeemNumber'] ?? '-',
+      status: json['status'] ?? '-',
       redeemDate: json['createdAt']?.toString() ?? '-',
       updatedAt: json['updatedAt']?.toString() ?? '-',
-
+      ticketOrigin: json['ticketOrigin'] ?? '-',
       customerName: member['name'] ?? '-',
       identityNumber: member['identityNumber'] ?? '-',
 
@@ -109,9 +122,10 @@ class Redeem {
 
       journeyType: json['redeemType'] ?? '-',
       programType: card['programType'] ?? '-',
+      memberId: member['id'] ?? '',
 
       usedQuota: quotaUsed,
-      remainingQuota: quotaTicket,
+      remainingQuota: remainingQuota,
       seatClassProgram: '',
       quotaTicket: quotaTicket,
       masaAktif: masaAktif,
@@ -121,6 +135,7 @@ class Redeem {
       note: json['notes']?.toString() ?? '-',
 
       operatorName: operator['fullName'] ?? '-',
+      secondaryOperatorName: secondaryOperator['fullName'] ?? '-',
       nipKai: operator['nip'] ?? '-',
       station: station['stationName'] ?? '-',
 
@@ -129,7 +144,7 @@ class Redeem {
       passengers: passengers,
       cardId: json['cardId'] ?? '',
       stationId: stationId,
-      channelCode: '',
+      channelName: '',
       expiredDate: '', // kosong dulu, nanti diisi dari API card
     );
   }
@@ -141,14 +156,18 @@ class Redeem {
     int? masaAktif,
     String? seatClassProgram,
     String? expiredDate,
-    String? channelCode,
+    String? channelName,
     int? totalQuota,
+    String? redeemNumber,
+    String? status,
+    String? ticketOrigin,
   }) {
     return Redeem(
       id: id,
       redeemDate: redeemDate,
       updatedAt: updatedAt,
       customerName: customerName,
+      memberId: memberId,
       identityNumber: identityNumber,
       transactionNumber: transactionNumber,
       serialNumber: serialNumber,
@@ -168,12 +187,16 @@ class Redeem {
       isDeleted: isDeleted,
       note: note,
       operatorName: operatorName,
+      secondaryOperatorName: secondaryOperatorName,
       nipKai: nipKai,
       station: station,
       stationId: stationId,
-      channelCode: channelCode ?? this.channelCode, // 🔥 FIX
+      channelName: channelName ?? this.channelName, // 🔥 FIX
       lastRedeem: (remainingQuota ?? this.remainingQuota) <= 0,
       passengers: passengers,
+      redeemNumber: redeemNumber ?? this.redeemNumber,
+      status: status ?? this.status,
+      ticketOrigin: ticketOrigin ?? this.ticketOrigin,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:ocr_project/src/presentation/api.dart';
 
 class AuthController {
   final _storage = const FlutterSecureStorage();
@@ -14,9 +15,18 @@ class AuthController {
   }
 
   Future<void> logout() async {
-    await _storage.delete(key: 'token');
-    await _storage.delete(key: 'userId');
-    await _storage.delete(key: 'userProfile');
+    try {
+      // 🔥 panggil API logout
+      await Api().dio.post('/auth/logout');
+
+      // 🔥 hapus data login dari storage
+      await _storage.deleteAll();
+    } catch (e) {
+      print("Logout error: $e");
+
+      // kalau API error tetap hapus local token
+      await _storage.deleteAll();
+    }
   }
 
   Future<bool> isLoggedIn() async {

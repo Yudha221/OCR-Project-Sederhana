@@ -3,14 +3,14 @@ class Station {
   final String stationCode;
   final String stationName;
   final String location;
-  final String channelCode; // 🔥 TAMBAHKAN
+  final String channelName; // 🔥 TAMBAHKAN
 
   Station({
     required this.id,
     required this.stationCode,
     required this.stationName,
     required this.location,
-    required this.channelCode, // 🔥 TAMBAHKAN
+    required this.channelName, // 🔥 TAMBAHKAN
   });
 
   factory Station.fromJson(Map<String, dynamic> json) {
@@ -19,7 +19,7 @@ class Station {
       stationCode: json['stationCode'] ?? '',
       stationName: json['stationName'] ?? '',
       location: json['location'] ?? '',
-      channelCode: json['channelCode'] ?? '', // 🔥 TAMBAHKAN
+      channelName: json['channelName'] ?? '', // 🔥 TAMBAHKAN
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ocr_project/src/models/my_response.dart';
@@ -21,6 +22,8 @@ class LoginController {
         passwordController.text.trim(),
       );
 
+      final body = response.data as Map<String, dynamic>;
+
       // ================= SUCCESS =================
       if (response.statusCode == 200) {
         final body = response.data as Map<String, dynamic>;
@@ -42,24 +45,32 @@ class LoginController {
         );
       }
 
-      // ================= USER / PASSWORD SALAH =================
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        return MyResponse<User>(
-          code: 1,
-          message: 'Username atau password salah',
-        );
+      // ================= ERROR BACKEND =================
+      return MyResponse<User>(
+        code: 1,
+        message: body['error']?['message'] ?? 'Terjadi kesalahan',
+      );
+    }
+    // ================= ERROR DIO =================
+    on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+
+        if (data is Map<String, dynamic>) {
+          return MyResponse<User>(
+            code: 1,
+            message: data['error']?['message'] ?? 'Terjadi kesalahan',
+          );
+        }
       }
 
-      // ================= SERVER ERROR =================
+      return MyResponse<User>(code: 1, message: 'Koneksi internet terputus');
+    }
+    // ================= ERROR LAIN =================
+    catch (_) {
       return MyResponse<User>(
         code: 1,
-        message: 'Server sedang bermasalah, silakan coba lagi',
-      );
-    } catch (_) {
-      // ================= INTERNET ERROR =================
-      return MyResponse<User>(
-        code: 1,
-        message: 'Koneksi internet terputus, periksa jaringan Anda',
+        message: 'Terjadi kesalahan pada aplikasi',
       );
     }
   }

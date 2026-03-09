@@ -248,13 +248,7 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildMainSection(),
-                          if (_cardData != null) ...[
-                            const SizedBox(height: 24),
-                            _buildCardSection(),
-                          ],
-                        ],
+                        children: [_buildMainSection()],
                       ),
               ),
             ),
@@ -300,13 +294,7 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
         ),
 
         const SizedBox(height: 20),
-
-        if (_cardData != null &&
-            !(_isSerialVerified &&
-                MediaQuery.of(context).size.width > 768 &&
-                MediaQuery.of(context).orientation == Orientation.landscape))
-          _buildCardSection(),
-
+        if (_cardData != null) _buildCardSection(),
         const SizedBox(height: 20),
 
         TextField(
@@ -424,25 +412,37 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
 
         const SizedBox(height: 24),
 
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: (_isSerialVerified && _isFormValid && !_isRedeeming)
-                ? _redeemVoucher
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: (_isSerialVerified && _isFormValid)
-                  ? Colors.green
-                  : Colors.grey,
-              foregroundColor: Colors.white,
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + 20,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: (_isSerialVerified && _isFormValid && !_isRedeeming)
+                  ? _redeemVoucher
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: (_isSerialVerified && _isFormValid)
+                    ? Colors.green
+                    : Colors.grey,
+                foregroundColor: Colors.white,
+              ),
+              child: _isRedeeming
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Redeem Voucher',
+                      style: TextStyle(fontSize: 16),
+                    ),
             ),
-            child: _isRedeeming
-                ? const CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  )
-                : const Text('Redeem Voucher', style: TextStyle(fontSize: 16)),
           ),
         ),
       ],
@@ -469,7 +469,10 @@ class _RedeemVoucherPageState extends State<RedeemVoucherPage> {
             _infoRow('No. Seri', _cardData?['serialNumber'] ?? '-'),
             _infoRow('Kategori', _cardData?['cardCategory'] ?? '-'),
             _infoRow('Kelas', _cardData?['cardType'] ?? '-'),
-            _infoRow('Masa Berlaku', formatDateIndo(_cardData?['expiredDate'])),
+            _infoRow(
+              'Berlaku Hingga',
+              formatDateIndo(_cardData?['expiredDate']),
+            ),
             _infoRow(
               'Status',
               _cardData?['statusActive'] ?? '-',

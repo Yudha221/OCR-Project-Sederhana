@@ -14,7 +14,7 @@ class LastRedeemPage extends StatefulWidget {
 }
 
 class _LastRedeemPageState extends State<LastRedeemPage> {
-  late final LastRedeem lastRedeem;
+  late LastRedeem lastRedeem;
 
   final LastRedeemController controller = LastRedeemController();
   final ImagePicker _picker = ImagePicker();
@@ -25,10 +25,23 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
   // 🔥 TAMBAHAN: simpan URL foto hasil upload
   String? uploadedPhotoUrl;
 
+  Future<void> _loadLatestRedeem() async {
+    final updated = await controller.fetchLastRedeem(lastRedeem.id);
+
+    if (updated != null) {
+      setState(() {
+        lastRedeem = updated;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     lastRedeem = widget.data;
+
+    // 🔥 ambil data terbaru dari server
+    _loadLatestRedeem();
   }
 
   // ================= PICK IMAGE =================
@@ -80,30 +93,63 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
     setState(() => isUploading = true);
 
     try {
-      // 🔥 UPLOAD + AMBIL URL DARI SERVER
       final photoUrl = await controller.uploadPhoto(
         lastRedeem.id,
         selectedImage!,
       );
 
       setState(() {
-        uploadedPhotoUrl = photoUrl;
         selectedImage = null;
+        lastRedeem = lastRedeem.copyWith(photoUrl: photoUrl);
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Upload berhasil')));
+      _showSuccessDialog(); // popup berhasil
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Upload gagal'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(); // popup gagal
     } finally {
       setState(() => isUploading = false);
     }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("Upload Berhasil"),
+          content: const Text("Foto berhasil diupload."),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Upload Gagal"),
+          content: const Text("Foto gagal diupload."),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -146,24 +192,20 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   width: double.infinity,
-                  height: 180,
+                  height: 300,
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: selectedImage != null
-                      // 1️⃣ FOTO BARU DIPILIH
-                      ? Image.file(selectedImage!, fit: BoxFit.cover)
-                      // 2️⃣ FOTO BARU SELESAI UPLOAD
-                      : uploadedPhotoUrl != null
-                      ? Image.network(uploadedPhotoUrl!, fit: BoxFit.cover)
-                      // 3️⃣ FOTO DARI SERVER (AWAL)
-                      : lastRedeem.photoUrl != null &&
-                            lastRedeem.photoUrl!.isNotEmpty
+                      ? Image.file(selectedImage!, fit: BoxFit.contain)
+                      : (lastRedeem.photoUrl != null &&
+                            lastRedeem.photoUrl!.isNotEmpty)
                       ? Image.network(
-                          lastRedeem.photoUrl!,
-                          fit: BoxFit.cover,
+                          "${lastRedeem.photoUrl}?t=${DateTime.now().millisecondsSinceEpoch}",
+                          key: ValueKey(lastRedeem.photoUrl), // 🔥 penting
+                          fit: BoxFit.contain,
                           loadingBuilder: (context, child, progress) {
                             if (progress == null) return child;
                             return const Center(
@@ -176,7 +218,6 @@ class _LastRedeemPageState extends State<LastRedeemPage> {
                             );
                           },
                         )
-                      // 4️⃣ BELUM ADA FOTO
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [

@@ -65,16 +65,11 @@ class RedeemRepository {
   Future<Map<String, dynamic>> deleteRedeem({
     required String id,
     required String note,
-    required String deletedBy,
   }) async {
     try {
       final Response response = await dio.delete(
         '/redeem/$id',
-        queryParameters: {'notes': note, 'deletedBy': deletedBy},
-        data: {
-          'notes': note,
-          'deletedBy': deletedBy,
-        }, // DOUBLE SEND (Body + Query)
+        data: {'notes': note},
       );
 
       if (response.statusCode == 200) {
@@ -189,6 +184,11 @@ class RedeemRepository {
 
   Future<Map<String, dynamic>> getCardById(String id) async {
     final response = await dio.get('/cards/$id');
+    return response.data['data'];
+  }
+
+  Future<Map<String, dynamic>> getStationById(String id) async {
+    final response = await dio.get('/station/$id');
     return response.data['data'];
   }
 }

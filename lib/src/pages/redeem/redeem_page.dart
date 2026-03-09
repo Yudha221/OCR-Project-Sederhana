@@ -388,7 +388,7 @@ class _RedeemPageState extends State<RedeemPage> {
       });
 
       if (afterRedeemQuota == 0) {
-        final lastRedeemId = response['data']['transactionNumber'];
+        final lastRedeemId = response['data']['id'];
         await _openLastRedeemCamera(lastRedeemId);
         return;
       }
@@ -430,14 +430,12 @@ class _RedeemPageState extends State<RedeemPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 3️⃣ PREVIEW FOTO
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  _lastRedeemImage!,
+                child: SizedBox(
+                  width: 250,
                   height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+                  child: Image.file(_lastRedeemImage!, fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(height: 12),
@@ -698,23 +696,29 @@ class _RedeemPageState extends State<RedeemPage> {
 
         const SizedBox(height: 24),
 
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isVerified ? Colors.red : Colors.grey,
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + 16,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isVerified ? Colors.red : Colors.grey,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: (_isVerified && !_isRedeeming) ? _redeem : null,
+              child: _isRedeeming
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Redeem', style: TextStyle(color: Colors.white)),
             ),
-            onPressed: (_isVerified && !_isRedeeming) ? _redeem : null,
-            child: _isRedeeming
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('Redeem', style: TextStyle(color: Colors.white)),
           ),
         ),
       ],

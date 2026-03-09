@@ -68,7 +68,7 @@ class RedeemController {
           } else {
             final station = await _repo.getStationById(redeem.stationId);
 
-            channel = station['channelCode'] ?? '';
+            channel = station['channelName'] ?? '';
             stationCache[redeem.stationId] = channel;
           }
         }
@@ -79,7 +79,7 @@ class RedeemController {
           masaAktif: match.masaBerlaku,
           seatClassProgram: match.typeName,
           expiredDate: expired,
-          channelCode: channel,
+          channelName: channel,
         );
       }),
     );
@@ -109,9 +109,8 @@ class RedeemController {
   Future<Map<String, dynamic>> deleteRedeem({
     required String id,
     required String note,
-    required String deletedBy,
   }) {
-    return _repo.deleteRedeem(id: id, note: note, deletedBy: deletedBy);
+    return _repo.deleteRedeem(id: id, note: note);
   }
 
   // =====================

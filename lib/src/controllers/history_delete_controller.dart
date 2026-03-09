@@ -1,30 +1,34 @@
 import '../repositories/history_delete_repository.dart';
+import '../models/pembatalan_kereta.dart';
 
 class HistoryDeleteController {
   final HistoryDeleteRepository _repo = HistoryDeleteRepository();
 
   bool isLoading = false;
 
-  // pagination (CLIENT SIDE)
   int currentPage = 1;
   int rowsPerPage = 10;
 
-  List<dynamic> allData = [];
-  List<dynamic> filteredData = [];
-  List<dynamic> tableData = [];
+  List<PembatalanKereta> allData = [];
+  List<PembatalanKereta> filteredData = [];
+  List<PembatalanKereta> tableData = [];
 
   Future<void> load() async {
     isLoading = true;
 
-    // 🔥 AMBIL SEMUA DATA (limit BESAR)
     final res = await _repo.fetchHistoryDelete(limit: 1000);
     final result = res.data['data'];
 
-    allData = (result['items'] as List)
-        .where((e) => e['card']?['programType'] == 'FWC')
-        .toList();
-    currentPage = 1;
+    final List items = result['items'];
 
+    allData = items
+        .map((e) => PembatalanKereta.fromJson(e))
+        .where((e) => e.programType == 'FWC')
+        .toList();
+
+    filteredData = allData;
+
+    currentPage = 1;
     _applyPagination();
 
     isLoading = false;
@@ -34,19 +38,10 @@ class HistoryDeleteController {
     final key = keyword.toLowerCase();
 
     filteredData = allData.where((e) {
-      return (e['transactionNumber'] ?? '').toString().toLowerCase().contains(
-            key,
-          ) ||
-          (e['card']?['serialNumber'] ?? '').toString().toLowerCase().contains(
-            key,
-          ) ||
-          (e['operator']?['fullName'] ?? '').toString().toLowerCase().contains(
-            key,
-          ) ||
-          (e['station']?['stationName'] ?? '')
-              .toString()
-              .toLowerCase()
-              .contains(key);
+      return e.transactionNumber.toLowerCase().contains(key) ||
+          e.serialNumber.toLowerCase().contains(key) ||
+          e.operatorName.toLowerCase().contains(key) ||
+          e.stationName.toLowerCase().contains(key);
     }).toList();
 
     currentPage = 1;
@@ -54,8 +49,6 @@ class HistoryDeleteController {
   }
 
   void _applyPagination() {
-    filteredData = filteredData.isEmpty ? allData : filteredData;
-
     final start = (currentPage - 1) * rowsPerPage;
     final end = start + rowsPerPage;
 
@@ -66,8 +59,10 @@ class HistoryDeleteController {
   }
 
   void nextPage() {
-    currentPage++;
-    _applyPagination();
+    if (currentPage < totalPage) {
+      currentPage++;
+      _applyPagination();
+    }
   }
 
   void prevPage() {

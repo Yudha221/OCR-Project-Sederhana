@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:ocr_project/src/presentation/api.dart';
 
@@ -16,7 +17,19 @@ class LastRedeemRepository {
       options: Options(headers: {'Content-Type': 'application/json'}),
     );
 
-    final path = response.data['data']['path'];
-    return 'https://fwc-kcic.me:3001/$path';
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final message = response.data['message'] ?? 'Upload gagal (${response.statusCode})';
+      throw Exception(message);
+    }
+
+    final data = response.data['data'];
+
+    if (data == null || data['path'] == null) {
+      throw Exception('Path foto tidak ditemukan dari server');
+    }
+
+    final path = data['path'];
+
+    return 'https://rewards-dev.kcic.co.id/api/$path';
   }
 }

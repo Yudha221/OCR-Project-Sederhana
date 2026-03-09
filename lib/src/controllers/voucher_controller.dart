@@ -1,6 +1,4 @@
-import 'package:ocr_project/src/models/card_product.dart';
 import 'package:ocr_project/src/models/station.dart';
-
 import '../models/redeem.dart';
 import '../repositories/voucher_repository.dart';
 
@@ -9,16 +7,28 @@ enum ProductType { voucher, fwc }
 class VoucherRedeemController {
   final VoucherRepository _repo = VoucherRepository();
 
-  // =====================
-  // GET ALL VOUCHER DATA
-  // =====================
+  /// =====================
+  /// GLOBAL CACHE (ANTI API SPAM)
+  /// =====================
+  final Map<String, Map<String, dynamic>> _cardCache = {};
+  final Map<String, Map<String, dynamic>> _productCache = {};
+  Map<String, String>? _stationCache;
+
+  /// =====================
+  /// GET ALL VOUCHER DATA
+  /// =====================
   Future<List<Redeem>> fetchAllVoucher() async {
     int page = 1;
     const int limit = 50;
-    List<Redeem> allData = [];
 
+    final List<Redeem> allData = [];
+
+    /// =====================
+    /// PAGINATION FETCH
+    /// =====================
     while (true) {
       final data = await _repo.getRedeemList(page: page, limit: limit);
+
       if (data.isEmpty) break;
 
       allData.addAll(data);
@@ -29,78 +39,115 @@ class VoucherRedeemController {
         .where((e) => e.programType == 'VOUCHER')
         .toList();
 
-    final products = await _repo.getCardProducts('VOUCHER');
+    /// =====================
+    /// LOAD STATION CACHE SEKALI
+    /// =====================
+    if (_stationCache == null) {
+      final stations = await _repo.getStations();
 
-    // 🔥 Ambil semua station SEKALI SAJA
-    final stations = await _repo.getStations();
+      _stationCache = {for (var s in stations) s.id: s.channelName};
+    }
 
-    // 🔥 Buat map stationId -> channelCode
-    final stationMap = {for (var s in stations) s.id: s.channelCode};
+    /// =====================
+    /// ENRICH DATA
+    /// =====================
+    final List<Redeem> enriched = [];
 
-    final enriched = await Future.wait(
-      voucherData.map((redeem) async {
-        int totalQuota = 0;
-        int price = 0;
-        String expired = '';
+    for (final redeem in voucherData) {
+      int totalQuota = 0;
+      int price = 0;
+      String expired = '';
 
+      try {
         if (redeem.cardId.isNotEmpty) {
-          try {
-            // 1️⃣ Ambil card
-            final card = await _repo.getCardById(redeem.cardId);
+          final card = await _getCard(redeem.cardId);
 
-            expired = card['expiredDate']?.toString() ?? '';
-            final productId = card['cardProductId'];
+          expired = card['expiredDate']?.toString() ?? '';
 
-            // 2️⃣ Ambil card product detail
-            if (productId != null) {
-              final productRes = await _repo.dio.get(
-                '/card/product/$productId',
-              );
+          final productId = card['cardProductId'];
 
-              final product = productRes.data['data'];
+          if (productId != null) {
+            final product = await _getProduct(productId);
 
-              totalQuota =
-                  int.tryParse(product['totalQuota']?.toString() ?? '0') ?? 0;
+            totalQuota =
+                int.tryParse(product['totalQuota']?.toString() ?? '0') ?? 0;
 
-              price = int.tryParse(product['price']?.toString() ?? '0') ?? 0;
-            }
-          } catch (_) {}
+            price = int.tryParse(product['price']?.toString() ?? '0') ?? 0;
+          }
         }
+      } catch (_) {}
 
-        final channel = stationMap[redeem.stationId] ?? '';
+      final channel = _stationCache?[redeem.stationId] ?? '';
 
-        return redeem.copyWith(
+      enriched.add(
+        redeem.copyWith(
           price: price,
           expiredDate: expired,
-          channelCode: channel,
+          channelName: channel,
           totalQuota: totalQuota,
           remainingQuota: redeem.quotaTicket,
-        );
-      }),
-    );
+        ),
+      );
+    }
 
     return enriched;
   }
 
-  // =====================
-  // VERIFY SERIAL
-  // =====================
+  /// =====================
+  /// CARD CACHE
+  /// =====================
+  Future<Map<String, dynamic>> _getCard(String cardId) async {
+    if (_cardCache.containsKey(cardId)) {
+      return _cardCache[cardId]!;
+    }
+
+    final card = await _repo.getCardById(cardId);
+
+    _cardCache[cardId] = card;
+
+    return card;
+  }
+
+  /// =====================
+  /// PRODUCT CACHE
+  /// =====================
+  Future<Map<String, dynamic>> _getProduct(String productId) async {
+    if (_productCache.containsKey(productId)) {
+      return _productCache[productId]!;
+    }
+
+    final response = await _repo.dio.get('/card/product/$productId');
+
+    final product = response.data['data'];
+
+    _productCache[productId] = product;
+
+    return product;
+  }
+
+  /// =====================
+  /// VERIFY SERIAL
+  /// =====================
   Future<Map<String, dynamic>> verifySerial(String serialNumber) {
     return _repo.verifySerial(serialNumber);
   }
 
+  /// =====================
+  /// PRODUCT TYPE DETECTION
+  /// =====================
   ProductType detectProductType(Map<String, dynamic> data) {
     final totalQuota = data['cardProduct']?['totalQuota'];
 
     if (totalQuota == 1) return ProductType.voucher;
+
     if (totalQuota > 1) return ProductType.fwc;
 
     throw Exception('Invalid product data');
   }
 
-  // =====================
-  // REDEEM
-  // =====================
+  /// =====================
+  /// REDEEM
+  /// =====================
   Future<Map<String, dynamic>> redeemVoucher({
     required String serial,
     required String name,
@@ -115,9 +162,9 @@ class VoucherRedeemController {
     );
   }
 
-  // =====================
-  // DELETE
-  // =====================
+  /// =====================
+  /// DELETE
+  /// =====================
   Future<Map<String, dynamic>> deleteVoucher({
     required String id,
     required String note,
@@ -126,35 +173,30 @@ class VoucherRedeemController {
     return _repo.deleteVoucher(id: id, note: note, deletedBy: deletedBy);
   }
 
-  // =====================
-  // GET VOUCHER CATEGORY NAMES
-  // =====================
+  /// =====================
+  /// GET CATEGORY NAMES
+  /// =====================
   Future<List<String>> fetchVoucherCategoryNames() async {
     final categories = await _repo.getVoucherCategories();
 
-    // 🔥 ambil categoryName saja
     return categories.map((e) => e.categoryName).toList();
   }
 
-  // =====================
-  // GET VOUCHER TYPE NAMES
-  // =====================
+  /// =====================
+  /// GET TYPE NAMES
+  /// =====================
   Future<List<String>> fetchVoucherTypeNames() async {
     final types = await _repo.getVoucherCardTypes();
 
-    // 🔥 ambil typeName saja
     return types.map((e) => e.typeName).toList();
   }
 
-  // =====================
-  // GET STATION NAMES
-  // =====================
+  /// =====================
+  /// GET STATION NAMES
+  /// =====================
   Future<List<String>> fetchStationNames() async {
-    final List<Station> stations = await _repo.getStations();
+    final stations = await _repo.getStations();
 
-    return stations
-        .map((e) => e.stationName)
-        .toSet() // 🚨 hindari duplikat
-        .toList();
+    return stations.map((e) => e.stationName).toSet().toList();
   }
 }
