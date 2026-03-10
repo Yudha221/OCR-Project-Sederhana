@@ -64,34 +64,37 @@ class RedeemRepository {
   // =====================
   Future<Map<String, dynamic>> deleteRedeem({
     required String id,
-    required String note,
+    required String reason,
+    required String notes,
+    String? trainBookCode,
+    String? trainNumber,
+    String? ticketNumber,
+    String? departureDate,
   }) async {
     try {
-      final Response response = await dio.delete(
-        '/redeem/$id',
-        data: {'notes': note},
-      );
+      final Map<String, dynamic> body = {
+        "reason": reason,
+        "notes": notes,
+        "trainBookCode": trainBookCode,
+        "trainNumber": trainNumber,
+        "ticketNumber": ticketNumber,
+        "departureDate": departureDate,
+      };
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': response.data['message'] ?? 'Berhasil dihapus',
-        };
-      }
+      /// hapus field null agar tidak dikirim
+      body.removeWhere((key, value) => value == null);
+
+      final Response response = await dio.delete('/redeem/$id', data: body);
 
       return {
-        'success': false,
-        'message':
-            response.data?['message'] ??
-            'Gagal menghapus (${response.statusCode})',
+        "success": true,
+        "message": response.data["message"] ?? "Berhasil dihapus",
       };
     } on DioException catch (e) {
       return {
-        'success': false,
-        'message': e.response?.data?['message'] ?? 'Server error',
+        "success": false,
+        "message": e.response?.data?["message"] ?? "Server error",
       };
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
     }
   }
 

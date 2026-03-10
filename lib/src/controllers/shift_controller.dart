@@ -72,8 +72,19 @@ class ShiftController {
     try {
       final res = await _repo.exportShiftReport();
 
-      if (res['success'] == true) {
+      // Jika ada wrapper 'data', ambil data-nya
+      if (res.containsKey('data') && res['data'] != null) {
         return res['data'];
+      }
+      
+      // Jika tidak ada wrapper 'data' tapi ada key report langsung
+      if (res.containsKey('voucherReport') || res.containsKey('voucher_report')) {
+        return res;
+      }
+
+      // Default jika success true tapi tidak tahu strukturnya
+      if (res['success'] == true) {
+        return res['data'] ?? res;
       }
 
       return null;

@@ -72,6 +72,8 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   @override
   void initState() {
     super.initState();
+    startDate = DateTime.now();
+    endDate = DateTime.now();
     _shiftManager.init();
     _loadUserProfile();
     _loadVoucher();
@@ -278,33 +280,35 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
               roleAccess: roleAccess!, // 🔥 INI KUNCI
             ),
 
-      body: _shouldLockPage()
-          ? _buildShiftLockedView()
-          : RefreshIndicator(
-              onRefresh: _loadVoucher,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  MediaQuery.of(context).padding.bottom +
-                      16, //  🔥 SAFE AREA BAWAH
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _titleSection(),
-                    const SizedBox(height: 16),
-                    _searchSection(),
-                    const SizedBox(height: 16),
-                    _filterSection(),
-                    const SizedBox(height: 20),
-                    _tableSection(),
-                  ],
+      body: SafeArea(
+        child: _shouldLockPage()
+            ? _buildShiftLockedView()
+            : RefreshIndicator(
+                onRefresh: _loadVoucher,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    MediaQuery.of(context).padding.bottom + 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _titleSection(),
+                      const SizedBox(height: 16),
+                      _searchSection(),
+                      const SizedBox(height: 16),
+                      _filterSection(),
+                      const SizedBox(height: 20),
+                      _tableSection(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -396,80 +400,88 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // ================= FILTER =================
   Widget _filterSection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ===== FILTER AREA =====
-        SizedBox(
-          width: 180, // 👈 atur lebar di sini (150–220 bebas)
-          child: FilterButton(
-            categoryItems: voucherCategoryItems,
-            cardTypeItems: voucherTypeItems,
-            stationItems: roleAccess?.lockStation == true ? [] : stationItems,
+  return Row(
+    children: [
+      Expanded(
+        flex: 2,
+        child: _buildFilterButton(),
+      ),
 
-            selectedCategories: selectedCategories,
-            selectedCardTypes: selectedCardTypes,
-            selectedStations: selectedStations,
-
-            startDate: startDate,
-            endDate: endDate,
-
-            onCategoryChanged: (v) => selectedCategories = v,
-            onCardTypeChanged: (v) => selectedCardTypes = v,
-            onStationChanged: roleAccess?.lockStation == true
-                ? (_) {}
-                : (v) => selectedStations = v,
-
-            onStartDateChanged: (v) => startDate = v,
-            onEndDateChanged: (v) => endDate = v,
-
-            onApply: () {
-              currentPage = 1;
-              setState(_applyFilterAndPagination);
-            },
-
-            onReset: _resetFilter,
-          ),
-        ),
-
+      if (roleAccess?.canExportReport == true) ...[
         const SizedBox(width: 16),
-
-        // ===== PRINT BUTTON =====
         Expanded(
-          child: SizedBox(
-            height: 45,
-            child: ElevatedButton(
-              onPressed: filteredData.isEmpty
-                  ? null
-                  : () async {
-                      print("Export ditekan");
-
-                      await VoucherReportService.generateReport(
-                        data: filteredData,
-                        station: userStation ?? '-',
-                        operatorName: userName,
-                        shiftDate: DateTime.now(),
-                        userCode: username,
-                        type: ProductType.voucher,
-                      );
-
-                      print("Export selesai");
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                "Export",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
+          flex: 1,
+          child: _buildExportButton(),
         ),
       ],
+    ],
+  );
+}
+
+  Widget _buildFilterButton() {
+    return FilterButton(
+      categoryItems: voucherCategoryItems,
+      cardTypeItems: voucherTypeItems,
+      stationItems: roleAccess?.lockStation == true ? [] : stationItems,
+      selectedCategories: selectedCategories,
+      selectedCardTypes: selectedCardTypes,
+      selectedStations: selectedStations,
+      startDate: startDate,
+      endDate: endDate,
+      onCategoryChanged: (v) => selectedCategories = v,
+      onCardTypeChanged: (v) => selectedCardTypes = v,
+      onStationChanged: roleAccess?.lockStation == true
+          ? (_) {}
+          : (v) => selectedStations = v,
+      onStartDateChanged: (v) => startDate = v,
+      onEndDateChanged: (v) => endDate = v,
+      onApply: () {
+        currentPage = 1;
+        setState(_applyFilterAndPagination);
+      },
+      onReset: _resetFilter,
+    );
+  }
+
+  Widget _buildExportButton() {
+    return SizedBox(
+      height: 45,
+      child: ElevatedButton.icon(
+        onPressed: filteredData.isEmpty
+            ? null
+            : () async {
+                setState(() => isLoading = true);
+                try {
+                  await VoucherReportService.generateReport(
+                    data: filteredData,
+                    station: userStation ?? '-',
+                    operatorName: userName,
+                    shiftDate: startDate ?? DateTime.now(),
+                    userCode: username,
+                    type: ProductType.voucher,
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Export gagal: $e")),
+                  );
+                } finally {
+                  setState(() => isLoading = false);
+                }
+              },
+        icon: const Icon(Icons.download_rounded),
+        label: const Text(
+          "Export",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
     );
   }
 
@@ -992,8 +1004,25 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
               final res = await _redeemController.deleteVoucher(
                 id: id,
-                note: note,
+                reason: selectedReason!,
+                notes: note,
                 deletedBy: userName,
+
+                trainBookCode: selectedReason == 'Pembatalan Kereta'
+                    ? bookingController.text.trim()
+                    : null,
+
+                trainNumber: selectedReason == 'Pembatalan Kereta'
+                    ? trainNumberController.text.trim()
+                    : null,
+
+                ticketNumber: selectedReason == 'Pembatalan Kereta'
+                    ? ticketNumberController.text.trim()
+                    : null,
+
+                departureDate: selectedReason == 'Pembatalan Kereta'
+                    ? DateFormat('yyyy-MM-dd').format(departureDate!)
+                    : null,
               );
 
               await _loadVoucher();

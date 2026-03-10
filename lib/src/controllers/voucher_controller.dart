@@ -1,3 +1,8 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:ocr_project/src/models/station.dart';
 import '../models/redeem.dart';
 import '../repositories/voucher_repository.dart';
@@ -167,10 +172,24 @@ class VoucherRedeemController {
   /// =====================
   Future<Map<String, dynamic>> deleteVoucher({
     required String id,
-    required String note,
+    required String reason,
+    required String notes,
     required String deletedBy,
+    String? trainBookCode,
+    String? trainNumber,
+    String? ticketNumber,
+    String? departureDate,
   }) {
-    return _repo.deleteVoucher(id: id, note: note, deletedBy: deletedBy);
+    return _repo.deleteVoucher(
+      id: id,
+      reason: reason,
+      notes: notes,
+      deletedBy: deletedBy,
+      trainBookCode: trainBookCode,
+      trainNumber: trainNumber,
+      ticketNumber: ticketNumber,
+      departureDate: departureDate,
+    );
   }
 
   /// =====================
@@ -198,5 +217,21 @@ class VoucherRedeemController {
     final stations = await _repo.getStations();
 
     return stations.map((e) => e.stationName).toSet().toList();
+  }
+
+  /// =====================
+  /// EXPORT PDF (BACKEND)
+  /// =====================
+  Future<void> downloadAndOpenExport({required DateTime date}) async {
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final bytes = await _repo.exportRedeemPdf(dateStr);
+
+    final directory = await getApplicationDocumentsDirectory();
+    final fileDate = DateFormat('yyyyMMdd').format(date);
+    final fileName = "Export_Redeem_$fileDate.pdf";
+    final file = File("${directory.path}/$fileName");
+
+    await file.writeAsBytes(bytes);
+    await OpenFilex.open(file.path);
   }
 }

@@ -108,9 +108,22 @@ class RedeemController {
   // =====================
   Future<Map<String, dynamic>> deleteRedeem({
     required String id,
-    required String note,
+    required String reason,
+    required String notes,
+    String? trainBookCode,
+    String? trainNumber,
+    String? ticketNumber,
+    String? departureDate,
   }) {
-    return _repo.deleteRedeem(id: id, note: note);
+    return _repo.deleteRedeem(
+      id: id,
+      reason: reason,
+      notes: notes,
+      trainBookCode: trainBookCode,
+      trainNumber: trainNumber,
+      ticketNumber: ticketNumber,
+      departureDate: departureDate,
+    );
   }
 
   // =====================

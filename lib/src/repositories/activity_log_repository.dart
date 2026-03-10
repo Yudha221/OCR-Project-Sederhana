@@ -4,7 +4,7 @@ import 'package:ocr_project/src/presentation/api.dart';
 class ActivityLogRepository {
   Future<Map<String, dynamic>> fetchLogs({
     int page = 1,
-    int limit = 10,
+    int limit = 1000,
     required String product,
     String? action,
     String? search,

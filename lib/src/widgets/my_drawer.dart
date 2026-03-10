@@ -434,10 +434,30 @@ class _MyDrawerState extends State<MyDrawer> {
                           Navigator.pop(context);
 
                           if (report != null) {
-                            await VoucherReportService.generateShiftReport(
-                              report,
-                              widget.userName,
-                            );
+                            try {
+                              await VoucherReportService.generateShiftReport(
+                                report,
+                                widget.userName,
+                              );
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Gagal membuat PDF: $e"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Gagal mengambil data report dari server"),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            }
                           }
                         },
                         child: const Text(
@@ -536,7 +556,7 @@ class _MyDrawerState extends State<MyDrawer> {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomePageKai()),
+                      MaterialPageRoute(builder: (_) => const HomePageKAI()),
                     );
                   },
                 ),
@@ -691,7 +711,7 @@ class _MyDrawerState extends State<MyDrawer> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ActivityLogsPagefwcKai(
+                          builder: (_) => ActivityLogsPagefwckai(
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,

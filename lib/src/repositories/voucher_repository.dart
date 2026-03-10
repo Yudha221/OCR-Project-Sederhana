@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:ocr_project/src/models/card_category.dart';
 import 'package:ocr_project/src/models/card_product.dart';
@@ -103,18 +104,40 @@ class VoucherRepository {
   // =====================
   Future<Map<String, dynamic>> deleteVoucher({
     required String id,
-    required String note,
+    required String reason,
+    required String notes,
     required String deletedBy,
+    String? trainBookCode,
+    String? trainNumber,
+    String? ticketNumber,
+    String? departureDate,
   }) async {
-    final response = await dio.delete(
-      '/redeem/$id',
-      data: {'notes': note, 'deletedBy': deletedBy},
-    );
+    try {
+      final body = {
+        "reason": reason,
+        "notes": notes,
+        "deletedBy": deletedBy,
+        "trainBookCode": trainBookCode,
+        "trainNumber": trainNumber,
+        "ticketNumber": ticketNumber,
+        "departureDate": departureDate,
+      };
 
-    return {
-      'success': response.statusCode == 200,
-      'message': response.data['message'],
-    };
+      /// hapus field null
+      body.removeWhere((key, value) => value == null);
+
+      final response = await dio.delete('/redeem/$id', data: body);
+
+      return {
+        "success": response.statusCode == 200,
+        "message": response.data['message'],
+      };
+    } on DioException catch (e) {
+      return {
+        "success": false,
+        "message": e.response?.data?['message'] ?? "Server error",
+      };
+    }
   }
 
   // =====================
@@ -169,5 +192,21 @@ class VoucherRepository {
   Future<Map<String, dynamic>> getCardById(String id) async {
     final response = await dio.get('/cards/$id');
     return response.data['data'];
+  }
+
+  // =====================
+  // EXPORT PDF
+  // =====================
+  Future<Uint8List> exportRedeemPdf(String date) async {
+    final response = await dio.get(
+      '/redeem/export',
+      queryParameters: {
+        'date': date,
+        'format': 'pdf',
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    return response.data as Uint8List;
   }
 }
