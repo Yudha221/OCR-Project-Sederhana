@@ -11,6 +11,7 @@ class LastRedeem {
   final int quotaUsed;
   final int remainingQuota;
   final int quotaTicket;
+  final int initialQuota;
   final String station;
   final String operatorName;
   final String status;
@@ -29,6 +30,7 @@ class LastRedeem {
     required this.quotaUsed,
     required this.remainingQuota,
     required this.quotaTicket,
+    required this.initialQuota,
     required this.station,
     required this.operatorName,
     required this.status,
@@ -36,29 +38,31 @@ class LastRedeem {
   });
 
   factory LastRedeem.fromJson(Map<String, dynamic> json) {
-    final memberId = json['card']['member']['id'];
+    final memberId = json['card']?['member']?['id'];
     final redeemId = json['id'];
 
     final photoUrl =
         'https://rewards-dev.kcic.co.id/api/storage/lastredeem/$memberId/$redeemId.jpg';
 
     return LastRedeem(
-      id: json['id'].toString(),
-      name: json['card']['member']['name'],
-      nik: json['card']['member']['identityNumber'],
-      serialNumber: json['card']['serialNumber'],
-      programType: json['card']['programType'],
-      cardCategory: json['card']['cardProduct']['category']['categoryName'],
-      cardType: json['card']['cardProduct']['type']['typeName'],
-      redeemDate: json['shiftDate'],
-      redeemType: json['redeemType'],
-      quotaUsed: json['quotaUsed'],
-      remainingQuota: json['remainingQuota'],
+      id: json['id']?.toString() ?? '',
+      name: json['card']?['member']?['name'] ?? '',
+      nik: json['card']?['member']?['identityNumber'] ?? '',
+      serialNumber: json['card']?['serialNumber'] ?? '',
+      programType: json['card']?['programType'] ?? '',
+      cardCategory:
+          json['card']?['cardProduct']?['category']?['categoryName'] ?? '',
+      cardType: json['card']?['cardProduct']?['type']?['typeName'] ?? '',
+      redeemDate: json['shiftDate'] ?? '',
+      redeemType: json['redeemType'] ?? '',
+      quotaUsed: json['quotaUsed'] ?? 0,
+      remainingQuota: json['remainingQuota'] ?? 0,
       quotaTicket: json['quotaTicket'] ?? 0,
-      station: json['station']['stationName'],
-      operatorName: json['operator']['fullName'],
-      status: json['status'],
-      photoUrl: photoUrl, // ✅ sekarang benar
+      initialQuota: json['card']?['cardProduct']?['totalQuota'] ?? 0,
+      station: json['station']?['stationName'] ?? '',
+      operatorName: json['operator']?['fullName'] ?? '',
+      status: json['status'] ?? '',
+      photoUrl: photoUrl,
     );
   }
 
@@ -76,6 +80,7 @@ class LastRedeem {
       quotaUsed: quotaUsed,
       remainingQuota: remainingQuota,
       quotaTicket: quotaTicket,
+      initialQuota: initialQuota,
       station: station,
       operatorName: operatorName,
       status: status,

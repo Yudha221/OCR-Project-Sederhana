@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ocr_project/src/controllers/auth_controller.dart';
-import 'package:ocr_project/src/controllers/redeem_controller.dart';
+import 'package:ocr_project/src/controllers/redeem_controller.dart'
+    hide ProductType;
 import 'package:ocr_project/src/controllers/shift_controller.dart';
 import 'package:ocr_project/src/models/last_redeem.dart';
 import 'package:ocr_project/src/models/redeem.dart';
@@ -12,6 +13,8 @@ import 'package:ocr_project/src/utils/status_awal_colors.dart';
 import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
 import 'package:ocr_project/src/models/user.dart';
+import 'package:ocr_project/src/services/voucher_pdf_service.dart';
+import 'package:ocr_project/src/models/card_type.dart';
 import 'dart:convert';
 import 'package:ocr_project/src/utils/role_access.dart';
 import 'package:intl/intl.dart';
@@ -35,6 +38,7 @@ class _HomePageState extends State<HomePage> {
   RoleAccess? roleAccess;
   String roleCode = '';
   String? userStation;
+  String username = '';
 
   // loading
   bool isLoading = false;
@@ -74,6 +78,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    startDate = DateTime.now();
+    endDate = DateTime.now();
 
     _shiftManager.init();
     _shiftManager.addListener(_refreshPage);
@@ -137,6 +144,7 @@ class _HomePageState extends State<HomePage> {
 
       roleCode = raw['role']['roleCode'];
       userStation = raw['station']?['stationName'];
+      username = raw['username'] ?? '-';
 
       roleAccess = RoleAccess(roleCode);
 
@@ -289,63 +297,34 @@ class _HomePageState extends State<HomePage> {
               roleAccess: roleAccess!,
             ),
       // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
-      body: _shouldLockPage()
-          ? _buildShiftLockedView()
-          : RefreshIndicator(
-              onRefresh: _loadRedeem,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  MediaQuery.of(context).padding.bottom + 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _titleSection(),
-                    const SizedBox(height: 16),
-                    _searchSection(),
-                    const SizedBox(height: 16),
-                    FilterButton(
-                      categoryItems: categoryItems,
-                      cardTypeItems: cardTypeItems,
-                      stationItems: roleAccess?.lockStation == true
-                          ? []
-                          : stationItems,
-                      selectedCategories: selectedCategories,
-                      selectedCardTypes: selectedCardTypes,
-                      selectedStations: selectedStations,
-                      startDate: startDate,
-                      endDate: endDate,
-                      onCategoryChanged: (v) {
-                        setState(() => selectedCategories = v);
-                      },
-                      onCardTypeChanged: (v) {
-                        setState(() => selectedCardTypes = v);
-                      },
-                      onStationChanged: roleAccess?.lockStation == true
-                          ? (_) {}
-                          : (v) => setState(() => selectedStations = v),
-                      onStartDateChanged: (d) {
-                        setState(() => startDate = d);
-                      },
-                      onEndDateChanged: (d) {
-                        setState(() => endDate = d);
-                      },
-                      onReset: _resetFilter,
-                      onApply: () {
-                        currentPage = 1;
-                        setState(_applyFilterAndPagination);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    _tableSection(),
-                  ],
+      body: SafeArea(
+        child: _shouldLockPage()
+            ? _buildShiftLockedView()
+            : RefreshIndicator(
+                onRefresh: _loadRedeem,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    MediaQuery.of(context).padding.bottom + 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _titleSection(),
+                      const SizedBox(height: 16),
+                      _searchSection(),
+                      const SizedBox(height: 16),
+                      _filterSection(),
+                      const SizedBox(height: 20),
+                      _tableSection(),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -427,6 +406,87 @@ class _HomePageState extends State<HomePage> {
           currentPage = 1;
           setState(_applyFilterAndPagination);
         },
+      ),
+    );
+  }
+
+  // ================= FILTER =================
+  Widget _filterSection() {
+    return Row(
+      children: [
+        Expanded(flex: 2, child: _buildFilterButton()),
+
+        if (roleAccess?.canExportReport == true) ...[
+          const SizedBox(width: 16),
+          Expanded(flex: 1, child: _buildExportButton()),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFilterButton() {
+    return FilterButton(
+      categoryItems: categoryItems,
+      cardTypeItems: cardTypeItems,
+      stationItems: roleAccess?.lockStation == true ? [] : stationItems,
+      selectedCategories: selectedCategories,
+      selectedCardTypes: selectedCardTypes,
+      selectedStations: selectedStations,
+      startDate: startDate,
+      endDate: endDate,
+      onCategoryChanged: (v) => setState(() => selectedCategories = v),
+      onCardTypeChanged: (v) => setState(() => selectedCardTypes = v),
+      onStationChanged: roleAccess?.lockStation == true
+          ? (_) {}
+          : (v) => setState(() => selectedStations = v),
+      onStartDateChanged: (d) => setState(() => startDate = d),
+      onEndDateChanged: (d) => setState(() => endDate = d),
+      onReset: _resetFilter,
+      onApply: () {
+        currentPage = 1;
+        setState(_applyFilterAndPagination);
+      },
+    );
+  }
+
+  Widget _buildExportButton() {
+    return SizedBox(
+      height: 45,
+      child: ElevatedButton.icon(
+        onPressed: filteredData.isEmpty
+            ? null
+            : () async {
+                setState(() => isLoading = true);
+                try {
+                  await VoucherReportService.generateReport(
+                    data: filteredData,
+                    station: userStation ?? '-',
+                    operatorName: userName,
+                    shiftDate: startDate ?? DateTime.now(),
+                    userCode: username,
+                    type: ProductType.fwc,
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Export gagal: $e")));
+                } finally {
+                  setState(() => isLoading = false);
+                }
+              },
+        icon: const Icon(Icons.download_rounded),
+        label: const Text(
+          "Export",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
       ),
     );
   }
@@ -652,6 +712,7 @@ class _HomePageState extends State<HomePage> {
                                       quotaUsed: e.usedQuota,
                                       remainingQuota: e.remainingQuota,
                                       quotaTicket: e.quotaTicket,
+                                      initialQuota: e.totalQuota,
                                       station: e.station,
                                       operatorName: e.operatorName,
                                       status: e.status,
@@ -1005,21 +1066,37 @@ class _HomePageState extends State<HomePage> {
                 return;
               }
 
-              late final String note;
+              String notes = '';
+              String? trainBookCode;
+              String? trainNumber;
+              String? ticketNumber;
+              String? departureDateString;
 
+              /// ===============================
+              /// PEMBATALAN KERETA
+              /// ===============================
               if (selectedReason == 'Pembatalan Kereta') {
-                note =
-                    'Alasan : Pembatalan Kereta\n'
-                    'Kode Booking : ${bookingController.text.trim()}\n'
-                    'Nomor KA : ${trainNumberController.text.trim()}\n'
-                    'Nomor Tiket : ${ticketNumberController.text.trim()}\n'
-                    'Tanggal Keberangkatan : ${DateFormat('dd-MM-yyyy').format(departureDate!)}';
-              } else if (selectedReason == 'Lainnya') {
-                note =
-                    'Alasan : Lainnya\n'
-                    'Keterangan : ${noteController.text.trim()}';
-              } else {
-                note = 'Alasan : $selectedReason';
+                trainBookCode = bookingController.text.trim();
+                trainNumber = trainNumberController.text.trim();
+                ticketNumber = ticketNumberController.text.trim();
+
+                departureDateString = DateFormat(
+                  'yyyy-MM-dd',
+                ).format(departureDate!);
+
+                notes = 'Pembatalan Kereta';
+              }
+              /// ===============================
+              /// SALAH INPUT
+              /// ===============================
+              else if (selectedReason == 'Salah input nomor seri kartu') {
+                notes = 'Salah input nomor seri kartu';
+              }
+              /// ===============================
+              /// LAINNYA
+              /// ===============================
+              else if (selectedReason == 'Lainnya') {
+                notes = noteController.text.trim();
               }
 
               FocusScope.of(context).unfocus();
@@ -1030,7 +1107,13 @@ class _HomePageState extends State<HomePage> {
               try {
                 final result = await _redeemController.deleteRedeem(
                   id: id,
-                  note: note,
+                  reason: selectedReason!,
+                  notes: notes,
+
+                  trainBookCode: trainBookCode,
+                  trainNumber: trainNumber,
+                  ticketNumber: ticketNumber,
+                  departureDate: departureDateString,
                 );
 
                 await _loadRedeem();
@@ -1038,12 +1121,12 @@ class _HomePageState extends State<HomePage> {
                 if (!mounted) return;
 
                 _showInfoDialog(
-                  title: result['success'] == true ? 'Berhasil' : 'Gagal',
-                  message: result['message'] ?? '',
-                  icon: result['success'] == true
+                  title: result["success"] ? "Berhasil" : "Gagal",
+                  message: result["message"],
+                  icon: result["success"]
                       ? Icons.check_circle_outline
                       : Icons.error_outline,
-                  color: result['success'] == true ? Colors.green : Colors.red,
+                  color: result["success"] ? Colors.green : Colors.red,
                 );
               } finally {
                 if (mounted) {

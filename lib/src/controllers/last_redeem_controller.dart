@@ -18,10 +18,33 @@ class LastRedeemController {
 
     if (match == null) return null;
 
-    return LastRedeem.fromJson(match);
+    final redeem = LastRedeem.fromJson(match);
+
+    // 🔥 hitung kuota terpakai dari backend data
+    int usedQuota = redeem.initialQuota - redeem.remainingQuota;
+
+    return LastRedeem(
+      id: redeem.id,
+      name: redeem.name,
+      nik: redeem.nik,
+      serialNumber: redeem.serialNumber,
+      programType: redeem.programType,
+      cardCategory: redeem.cardCategory,
+      cardType: redeem.cardType,
+      redeemDate: redeem.redeemDate,
+      redeemType: redeem.redeemType,
+      quotaUsed: usedQuota, // 🔥 ini yang dipakai
+      remainingQuota: redeem.remainingQuota,
+      quotaTicket: redeem.quotaTicket,
+      initialQuota: redeem.initialQuota,
+      station: redeem.station,
+      operatorName: redeem.operatorName,
+      status: redeem.status,
+      photoUrl: redeem.photoUrl,
+    );
   }
 
-  /// ✅ upload foto & dapet URL
+  /// upload foto & dapat URL
   Future<String> uploadPhoto(String id, File file) async {
     final bytes = await file.readAsBytes();
     final base64Image = base64Encode(bytes);

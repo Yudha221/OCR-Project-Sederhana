@@ -33,10 +33,11 @@ class RoleAccess {
     }
   }
 
-  /// ================= DELETE =================
+  /// ================= Pembatalan =================
   bool get canDelete {
     switch (roleCode) {
       case 'superadmin':
+      case 'petugas':
       case 'supervisor':
         return true;
       default:
@@ -70,6 +71,7 @@ class RoleAccess {
     switch (roleCode) {
       case 'superadmin':
       case 'supervisor':
+      case 'petugas':
       case 'spv_ticketing':
         return true;
       default:
