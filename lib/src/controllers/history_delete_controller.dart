@@ -58,6 +58,8 @@ class HistoryDeleteController {
     );
   }
 
+  void rebuildPagination() => _applyPagination();
+
   void nextPage() {
     if (currentPage < totalPage) {
       currentPage++;

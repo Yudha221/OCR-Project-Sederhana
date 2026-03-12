@@ -8,12 +8,14 @@ class PembatalanKeretaPagefwc extends StatefulWidget {
   final String userName;
   final String roleName;
   final RoleAccess roleAccess;
+  final String roleCode;
 
   const PembatalanKeretaPagefwc({
     super.key,
     required this.userName,
     required this.roleName,
     required this.roleAccess,
+    required this.roleCode,
   });
 
   @override
@@ -28,7 +30,7 @@ class _HistoryDeletePageState extends State<PembatalanKeretaPagefwc> {
   void initState() {
     super.initState();
 
-    controller.load().then((_) => setState(() {}));
+    _loadData();
 
     searchCtrl.addListener(() {
       controller.search(searchCtrl.text);
@@ -36,9 +38,20 @@ class _HistoryDeletePageState extends State<PembatalanKeretaPagefwc> {
     });
   }
 
-  /// 🔥 FUNCTION REFRESH
-  Future<void> _refreshData() async {
+  Future<void> _loadData() async {
     await controller.load();
+    // 🔒 Batasi data 7 hari untuk petugas
+    if (widget.roleCode == 'petugas') {
+      final limit = DateTime.now().subtract(const Duration(days: 7));
+      controller.allData = controller.allData.where((e) {
+        final d = DateTime.tryParse(e.deletedAt);
+        return d != null && d.isAfter(limit);
+      }).toList();
+      controller.filteredData = controller.allData;
+      controller.currentPage = 1;
+      // ignore: invalid_use_of_protected_member
+      controller.rebuildPagination();
+    }
     setState(() {});
   }
 
@@ -53,6 +66,7 @@ class _HistoryDeletePageState extends State<PembatalanKeretaPagefwc> {
         userName: widget.userName,
         roleName: widget.roleName,
         roleAccess: widget.roleAccess,
+        roleCode: widget.roleCode,
       ),
 
       appBar: AppBar(
@@ -134,7 +148,7 @@ class _HistoryDeletePageState extends State<PembatalanKeretaPagefwc> {
               /// TABLE + REFRESH
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: _refreshData,
+                  onRefresh: _loadData,
                   child: controller.isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : SingleChildScrollView(

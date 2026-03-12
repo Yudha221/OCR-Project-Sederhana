@@ -9,12 +9,14 @@ class PembatalanKeretaPageVoucher extends StatefulWidget {
   final String userName;
   final String roleName;
   final RoleAccess roleAccess;
+  final String roleCode;
 
   const PembatalanKeretaPageVoucher({
     super.key,
     required this.userName,
     required this.roleName,
     required this.roleAccess,
+    required this.roleCode,
   });
 
   @override
@@ -31,14 +33,27 @@ class _HistoryDeleteVoucherPageState
   void initState() {
     super.initState();
 
-    controller.load().then((_) {
-      if (mounted) setState(() {});
-    });
+    _loadData();
 
     searchCtrl.addListener(() {
       controller.search(searchCtrl.text);
       setState(() {});
     });
+  }
+
+  Future<void> _loadData() async {
+    await controller.load();
+    if (widget.roleCode == 'petugas') {
+      final limit = DateTime.now().subtract(const Duration(days: 7));
+      controller.allData = controller.allData.where((e) {
+        final d = DateTime.tryParse(e.deletedAt);
+        return d != null && d.isAfter(limit);
+      }).toList();
+      controller.filteredData = controller.allData;
+      controller.currentPage = 1;
+      controller.rebuildPagination();
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -58,6 +73,7 @@ class _HistoryDeleteVoucherPageState
         userName: widget.userName,
         roleName: widget.roleName,
         roleAccess: widget.roleAccess,
+        roleCode: widget.roleCode,
       ),
 
       appBar: AppBar(

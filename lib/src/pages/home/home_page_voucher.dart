@@ -35,6 +35,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   String roleCode = '';
   String username = '';
   String? userStation;
+  String? userStationId;
 
   // loading
   bool isLoading = false;
@@ -72,11 +73,13 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   @override
   void initState() {
     super.initState();
-    startDate = DateTime.now();
-    endDate = DateTime.now();
     _shiftManager.init();
-    _loadUserProfile();
-    _loadVoucher();
+    _initPage();
+  }
+
+  Future<void> _initPage() async {
+    await _loadUserProfile();
+    await _loadVoucher();
     _loadVoucherCategories();
     _loadVoucherTypes();
     _loadStations();
@@ -124,9 +127,20 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
     roleCode = raw['role']['roleCode']; // petugas / admin / dll
     userStation = raw['station']?['stationName'];
+    userStationId = raw['station']?['id']; // 🔥 simpan ID stasiun
     username = raw['username'] ?? '-';
 
     roleAccess = RoleAccess(roleCode);
+
+    // 🗓️ set default date range berdasarkan role
+    final now = DateTime.now();
+    if (roleCode == 'petugas') {
+      startDate = now.subtract(const Duration(days: 7));
+      endDate = now;
+    } else {
+      startDate = now;
+      endDate = now;
+    }
 
     setState(() {
       userName = raw['fullName'];
@@ -142,9 +156,24 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
   Future<void> _loadVoucher() async {
     setState(() => isLoading = true);
 
-    final data = await _redeemController.fetchAllVoucher(); // 🔥 VOUCHER
+    // 🔒 kirim stationId ke API kalau petugas
+    final data = await _redeemController.fetchAllVoucher(
+      stationId: roleCode == 'petugas' ? userStationId : null,
+    );
 
-    allData = data;
+    if (roleCode == 'petugas') {
+      final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+      final limitDate = _onlyDate(sevenDaysAgo);
+      allData = data.where((e) {
+        final d = DateTime.tryParse(e.redeemDate);
+        if (d == null) return false;
+        final rd = _onlyDate(d);
+        return rd.isAtSameMomentAs(limitDate) || rd.isAfter(limitDate);
+      }).toList();
+    } else {
+      allData = data;
+    }
+
     currentPage = 1;
     _applyFilterAndPagination();
 
@@ -223,8 +252,16 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
         selectedStations.clear();
       }
 
-      startDate = null;
-      endDate = null;
+      // 🗓️ reset ke default sesuai role
+      final now = DateTime.now();
+      if (roleCode == 'petugas') {
+        startDate = now.subtract(const Duration(days: 7));
+        endDate = now;
+      } else {
+        startDate = null;
+        endDate = null;
+      }
+
       currentPage = 1;
       _applyFilterAndPagination();
     });
@@ -278,6 +315,7 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
               userName: userName,
               roleName: roleName,
               roleAccess: roleAccess!, // 🔥 INI KUNCI
+              roleCode: roleCode,
             ),
 
       body: SafeArea(
@@ -400,23 +438,17 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   // ================= FILTER =================
   Widget _filterSection() {
-  return Row(
-    children: [
-      Expanded(
-        flex: 2,
-        child: _buildFilterButton(),
-      ),
+    return Row(
+      children: [
+        Expanded(flex: 2, child: _buildFilterButton()),
 
-      if (roleAccess?.canExportReport == true) ...[
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 1,
-          child: _buildExportButton(),
-        ),
+        if (roleAccess?.canExportReport == true) ...[
+          const SizedBox(width: 16),
+          Expanded(flex: 1, child: _buildExportButton()),
+        ],
       ],
-    ],
-  );
-}
+    );
+  }
 
   Widget _buildFilterButton() {
     return FilterButton(
@@ -461,9 +493,9 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                     type: ProductType.voucher,
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Export gagal: $e")),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Export gagal: $e")));
                 } finally {
                   setState(() => isLoading = false);
                 }
@@ -746,12 +778,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
 
   void _confirmDelete(String id) {
     final TextEditingController noteController = TextEditingController();
-    final TextEditingController bookingController = TextEditingController();
-    final TextEditingController trainNumberController = TextEditingController();
-    final TextEditingController ticketNumberController =
-        TextEditingController();
-
-    DateTime? departureDate;
     final formKey = GlobalKey<FormState>();
     String? selectedReason;
 
@@ -771,7 +797,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                     const Text(
                       'Yakin ingin menghapus voucher ini?\nAksi ini membutuhkan alasan penghapusan.',
                     ),
-
                     const SizedBox(height: 16),
 
                     /// DROPDOWN ALASAN
@@ -787,10 +812,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                           child: Text('Salah input nomor seri kartu'),
                         ),
                         DropdownMenuItem(
-                          value: 'Pembatalan Kereta',
-                          child: Text('Pembatalan Kereta'),
-                        ),
-                        DropdownMenuItem(
                           value: 'Lainnya',
                           child: Text('Lainnya'),
                         ),
@@ -798,142 +819,14 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                       onChanged: (v) {
                         setModalState(() {
                           selectedReason = v;
-
                           noteController.clear();
-                          bookingController.clear();
-                          trainNumberController.clear();
-                          ticketNumberController.clear();
-                          departureDate = null;
                         });
                       },
                       validator: (v) =>
                           v == null ? 'Alasan wajib dipilih' : null,
                     ),
 
-                    /// ============================
-                    /// PEMBATALAN KERETA
-                    /// ============================
-                    if (selectedReason == 'Pembatalan Kereta') ...[
-                      const SizedBox(height: 12),
-
-                      /// KODE BOOKING
-                      const Text(
-                        "Kode Booking Kereta",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: bookingController,
-                        decoration: const InputDecoration(
-                          hintText: "Masukkan kode booking",
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Kode booking wajib diisi';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// NOMOR KA
-                      const Text(
-                        "Nomor KA",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: trainNumberController,
-                        decoration: const InputDecoration(
-                          hintText: "Contoh: G1234",
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Nomor KA wajib diisi';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// NOMOR TIKET
-                      const Text(
-                        "Nomor Tiket",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: ticketNumberController,
-                        decoration: const InputDecoration(
-                          hintText: "Masukkan nomor tiket",
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Nomor tiket wajib diisi';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// TANGGAL KEBERANGKATAN
-                      const Text(
-                        "Tanggal Keberangkatan",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2100),
-                          );
-
-                          if (picked != null) {
-                            setModalState(() {
-                              departureDate = picked;
-                            });
-                          }
-                        },
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            hintText: "Pilih tanggal keberangkatan",
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            departureDate == null
-                                ? "Pilih tanggal keberangkatan"
-                                : DateFormat(
-                                    'dd MMM yyyy',
-                                  ).format(departureDate!),
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    /// ============================
                     /// ALASAN LAINNYA
-                    /// ============================
                     if (selectedReason == 'Lainnya') ...[
                       const SizedBox(height: 12),
                       TextFormField(
@@ -970,26 +863,9 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
 
-              if (selectedReason == 'Pembatalan Kereta' &&
-                  departureDate == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Tanggal keberangkatan wajib dipilih"),
-                  ),
-                );
-                return;
-              }
-
               late final String note;
 
-              if (selectedReason == 'Pembatalan Kereta') {
-                note =
-                    'Alasan : Pembatalan Kereta\n'
-                    'Kode Booking : ${bookingController.text.trim()}\n'
-                    'Nomor KA : ${trainNumberController.text.trim()}\n'
-                    'Nomor Tiket : ${ticketNumberController.text.trim()}\n'
-                    'Tanggal Keberangkatan : ${DateFormat('dd-MM-yyyy').format(departureDate!)}';
-              } else if (selectedReason == 'Lainnya') {
+              if (selectedReason == 'Lainnya') {
                 note =
                     'Alasan : Lainnya\n'
                     'Keterangan : ${noteController.text.trim()}';
@@ -1007,22 +883,6 @@ class _HomePageVoucherState extends State<HomePageVoucher> {
                 reason: selectedReason!,
                 notes: note,
                 deletedBy: userName,
-
-                trainBookCode: selectedReason == 'Pembatalan Kereta'
-                    ? bookingController.text.trim()
-                    : null,
-
-                trainNumber: selectedReason == 'Pembatalan Kereta'
-                    ? trainNumberController.text.trim()
-                    : null,
-
-                ticketNumber: selectedReason == 'Pembatalan Kereta'
-                    ? ticketNumberController.text.trim()
-                    : null,
-
-                departureDate: selectedReason == 'Pembatalan Kereta'
-                    ? DateFormat('yyyy-MM-dd').format(departureDate!)
-                    : null,
               );
 
               await _loadVoucher();

@@ -14,6 +14,14 @@ class AuthController {
     return user['fullName'] ?? user['username'] ?? '';
   }
 
+  Future<String> getStationId() async {
+    final userJson = await _storage.read(key: 'userProfile');
+    if (userJson == null) return '';
+
+    final user = jsonDecode(userJson);
+    return user['station']?['id'] ?? '';
+  }
+
   Future<void> logout() async {
     try {
       // 🔥 panggil API logout

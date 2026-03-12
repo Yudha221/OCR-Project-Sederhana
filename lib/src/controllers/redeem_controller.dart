@@ -11,13 +11,17 @@ class RedeemController {
   // =====================
   // GET ALL DATA 🔥
   // =====================
-  Future<List<Redeem>> fetchAllRedeem() async {
+  Future<List<Redeem>> fetchAllRedeem({String? stationId}) async {
     int page = 1;
     const int limit = 1000;
     List<Redeem> allData = [];
 
     while (true) {
-      final data = await _repo.getRedeemList(page: page, limit: limit);
+      final data = await _repo.getRedeemList(
+        page: page,
+        limit: limit,
+        stationId: stationId,
+      );
       if (data.isEmpty) break;
       allData.addAll(data);
       page++;

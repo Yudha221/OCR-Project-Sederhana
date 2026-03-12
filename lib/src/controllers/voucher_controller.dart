@@ -22,7 +22,7 @@ class VoucherRedeemController {
   /// =====================
   /// GET ALL VOUCHER DATA
   /// =====================
-  Future<List<Redeem>> fetchAllVoucher() async {
+  Future<List<Redeem>> fetchAllVoucher({String? stationId}) async {
     int page = 1;
     const int limit = 50;
 
@@ -32,7 +32,11 @@ class VoucherRedeemController {
     /// PAGINATION FETCH
     /// =====================
     while (true) {
-      final data = await _repo.getRedeemList(page: page, limit: limit);
+      final data = await _repo.getRedeemList(
+        page: page,
+        limit: limit,
+        stationId: stationId,
+      );
 
       if (data.isEmpty) break;
 

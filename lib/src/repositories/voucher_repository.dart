@@ -13,14 +13,23 @@ class VoucherRepository {
   // =====================
   // GET VOUCHER LIST ONLY
   // =====================
-  Future<List<Redeem>> getRedeemList({int page = 1, int limit = 10}) async {
+  Future<List<Redeem>> getRedeemList({
+    int page = 1,
+    int limit = 10,
+    String? stationId,
+  }) async {
+    final Map<String, dynamic> params = {
+      'page': page,
+      'limit': limit,
+      'programType': 'VOUCHER', // 🔥 PEMISAH UTAMA
+    };
+    if (stationId != null && stationId.isNotEmpty) {
+      params['stationId'] = stationId;
+    }
+
     final response = await dio.get(
       '/redeem',
-      queryParameters: {
-        'page': page,
-        'limit': limit,
-        'programType': 'VOUCHER', // 🔥 PEMISAH UTAMA
-      },
+      queryParameters: params,
     );
 
     final List items = response.data['data']['items'];

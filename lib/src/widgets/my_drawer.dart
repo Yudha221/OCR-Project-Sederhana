@@ -20,6 +20,7 @@ class MyDrawer extends StatefulWidget {
   final String userName;
   final String roleName;
   final RoleAccess roleAccess;
+  final String roleCode;
   final Function(bool)? onShiftChanged;
 
   const MyDrawer({
@@ -27,6 +28,7 @@ class MyDrawer extends StatefulWidget {
     required this.userName,
     required this.roleName,
     required this.roleAccess,
+    required this.roleCode,
     this.onShiftChanged,
   });
 
@@ -453,7 +455,9 @@ class _MyDrawerState extends State<MyDrawer> {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text("Gagal mengambil data report dari server"),
+                                  content: Text(
+                                    "Gagal mengambil data report dari server",
+                                  ),
                                   backgroundColor: Colors.orange,
                                 ),
                               );
@@ -556,7 +560,7 @@ class _MyDrawerState extends State<MyDrawer> {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomePageKAI()),
+                      MaterialPageRoute(builder: (_) => const HomePageKai()),
                     );
                   },
                 ),
@@ -583,7 +587,7 @@ class _MyDrawerState extends State<MyDrawer> {
         ),
 
         // ================= Riwayat Pembatalan =================
-        if (widget.roleAccess.canDelete)
+        if (widget.roleAccess.canViewCancellationHistory)
           ExpansionTile(
             leading: const Icon(Icons.delete, color: Colors.white),
             title: const Text(
@@ -596,7 +600,7 @@ class _MyDrawerState extends State<MyDrawer> {
             iconColor: Colors.white,
             collapsedIconColor: Colors.white,
             children: [
-              if (widget.roleAccess.canDelete)
+              if (widget.roleAccess.canViewCancellationHistory)
                 Padding(
                   padding: const EdgeInsets.only(left: 20),
                   child: MyDrawerTile(
@@ -611,6 +615,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,
+                            roleCode: widget.roleCode,
                           ),
                         ),
                       );
@@ -618,7 +623,7 @@ class _MyDrawerState extends State<MyDrawer> {
                   ),
                 ),
 
-              if (widget.roleAccess.canDelete)
+              if (widget.roleAccess.canViewCancellationHistory)
                 Padding(
                   padding: const EdgeInsets.only(left: 20),
                   child: MyDrawerTile(
@@ -633,6 +638,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,
+                            roleCode: widget.roleCode,
                           ),
                         ),
                       );
@@ -640,7 +646,7 @@ class _MyDrawerState extends State<MyDrawer> {
                   ),
                 ),
 
-              if (widget.roleAccess.canDelete)
+              if (widget.roleAccess.canViewCancellationHistory)
                 Padding(
                   padding: const EdgeInsets.only(left: 20),
                   child: MyDrawerTile(
@@ -655,6 +661,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,
+                            roleCode: widget.roleCode,
                           ),
                         ),
                       );
@@ -693,6 +700,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,
+                            roleCode: widget.roleCode,
                           ),
                         ),
                       );
@@ -715,6 +723,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,
+                            roleCode: widget.roleCode,
                           ),
                         ),
                       );
@@ -737,6 +746,7 @@ class _MyDrawerState extends State<MyDrawer> {
                             userName: widget.userName,
                             roleName: widget.roleName,
                             roleAccess: widget.roleAccess,
+                            roleCode: widget.roleCode,
                           ),
                         ),
                       );

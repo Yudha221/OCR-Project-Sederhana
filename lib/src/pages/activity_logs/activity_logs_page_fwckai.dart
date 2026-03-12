@@ -10,12 +10,14 @@ class ActivityLogsPagefwckai extends StatefulWidget {
   final String userName;
   final String roleName;
   final RoleAccess roleAccess;
+  final String roleCode;
 
   const ActivityLogsPagefwckai({
     super.key,
     required this.userName,
     required this.roleName,
     required this.roleAccess,
+    required this.roleCode,
   });
 
   @override
@@ -44,6 +46,13 @@ class _ActivityLogsPageState extends State<ActivityLogsPagefwckai> {
 
   Future<void> loadLogs() async {
     await controller.loadLogs(product: "FWCKAI");
+    // 🔒 Batasi data 7 hari untuk petugas
+    if (widget.roleCode == 'petugas') {
+      final limit = DateTime.now().subtract(const Duration(days: 7));
+      controller.allLogs = controller.allLogs.where((log) {
+        return log.createdAt.isAfter(limit);
+      }).toList();
+    }
     if (mounted) {
       setState(() {
         controller.filterLogs(searchController.text, selectedAction);
@@ -77,6 +86,7 @@ class _ActivityLogsPageState extends State<ActivityLogsPagefwckai> {
         userName: widget.userName,
         roleName: widget.roleName,
         roleAccess: widget.roleAccess,
+        roleCode: widget.roleCode,
       ),
       appBar: AppBar(
         automaticallyImplyLeading: false,

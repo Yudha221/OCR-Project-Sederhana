@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:ocr_project/src/controllers/auth_controller.dart';
 import 'package:ocr_project/src/controllers/redeem_controller.dart'
     hide ProductType;
-import 'package:ocr_project/src/controllers/shift_controller.dart';
 import 'package:ocr_project/src/models/last_redeem.dart';
 import 'package:ocr_project/src/models/redeem.dart';
 import 'package:ocr_project/src/pages/last_redeem/last_redeem_page.dart';
@@ -12,23 +10,20 @@ import 'package:ocr_project/src/utils/date_helper.dart';
 import 'package:ocr_project/src/utils/status_awal_colors.dart';
 import 'package:ocr_project/src/widgets/filter_button.dart';
 import 'package:ocr_project/src/widgets/my_drawer.dart';
-import 'package:ocr_project/src/models/user.dart';
 import 'package:ocr_project/src/services/voucher_pdf_service.dart';
-import 'package:ocr_project/src/models/card_type.dart';
 import 'dart:convert';
 import 'package:ocr_project/src/utils/role_access.dart';
 import 'package:intl/intl.dart';
 import 'package:ocr_project/src/managers/shift_manager.dart';
 
-class HomePageKAI extends StatefulWidget {
-  const HomePageKAI({super.key});
+class HomePageKai extends StatefulWidget {
+  const HomePageKai({super.key});
 
   @override
-  State<HomePageKAI> createState() => _HomePageKAIState();
+  State<HomePageKai> createState() => _HomePageKaiState();
 }
 
-class _HomePageKAIState extends State<HomePageKAI> {
-  final AuthController _authController = AuthController();
+class _HomePageKaiState extends State<HomePageKai> {
   final RedeemController _redeemController = RedeemController();
   final ShiftManager _shiftManager = ShiftManager();
 
@@ -38,6 +33,7 @@ class _HomePageKAIState extends State<HomePageKAI> {
   RoleAccess? roleAccess;
   String roleCode = '';
   String? userStation;
+  String? userStationId;
   String username = '';
 
   // loading
@@ -79,14 +75,17 @@ class _HomePageKAIState extends State<HomePageKAI> {
   void initState() {
     super.initState();
 
-    startDate = DateTime.now();
-    endDate = DateTime.now();
-
     _shiftManager.init();
     _shiftManager.addListener(_refreshPage);
 
-    _loadUserProfile();
-    _loadRedeem();
+    _initPage();
+  }
+
+  Future<void> _initPage() async {
+    final stationId = await _loadUserProfile();
+    await _loadRedeem(stationId);
+
+    // load dropdown lainnya
     _loadCategories();
     _loadCardTypes();
     _loadStations();
@@ -135,37 +134,66 @@ class _HomePageKAIState extends State<HomePageKAI> {
     });
   }
 
-  Future<void> _loadUserProfile() async {
+  Future<String?> _loadUserProfile() async {
     const storage = FlutterSecureStorage();
     final userJson = await storage.read(key: 'userProfile');
 
-    if (userJson != null) {
-      final raw = jsonDecode(userJson);
+    if (userJson == null) return null;
 
-      roleCode = raw['role']['roleCode'];
-      userStation = raw['station']?['stationName'];
-      username = raw['username'] ?? '-';
+    final raw = jsonDecode(userJson);
 
-      roleAccess = RoleAccess(roleCode);
+    roleCode = raw['role']['roleCode'];
+    userStation = raw['station']?['stationName'];
+    userStationId = raw['station']?['id'];
+    username = raw['username'] ?? '-';
 
-      setState(() {
-        userName = raw['fullName'];
-        roleName = raw['role']['roleName'];
+    roleAccess = RoleAccess(roleCode);
 
-        // 🔒 kalau role terkunci → auto station
-        if (roleAccess!.lockStation && userStation != null) {
-          selectedStations = [userStation!];
-        }
-      });
+    final now = DateTime.now();
+
+    if (roleCode == 'petugas') {
+      startDate = now.subtract(const Duration(days: 7));
+      endDate = now;
+    } else {
+      startDate = now;
+      endDate = now;
     }
+
+    setState(() {
+      userName = raw['fullName'];
+      roleName = raw['role']['roleName'];
+
+      if (roleAccess!.lockStation && userStation != null) {
+        selectedStations = [userStation!];
+      }
+    });
+
+    return userStationId;
   }
 
-  Future<void> _loadRedeem() async {
+  Future<void> _loadRedeem(String? stationId) async {
     setState(() => isLoading = true);
 
-    final data = await _redeemController.fetchAllRedeem();
+    final data = await _redeemController.fetchAllRedeem(
+      stationId: roleCode == 'petugas' ? stationId : null,
+    );
 
-    allData = data;
+    if (roleCode == 'petugas') {
+      final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+      final limitDate = _onlyDate(sevenDaysAgo);
+
+      allData = data.where((e) {
+        final d = DateTime.tryParse(e.redeemDate);
+        if (d == null) return false;
+
+        final rd = _onlyDate(d);
+
+        return rd.isAtSameMomentAs(limitDate) || rd.isAfter(limitDate);
+      }).toList();
+    } else {
+      allData = data;
+    }
+
     currentPage = 1;
     _applyFilterAndPagination();
 
@@ -240,8 +268,16 @@ class _HomePageKAIState extends State<HomePageKAI> {
         selectedStations.clear();
       }
 
-      startDate = null;
-      endDate = null;
+      // 🗓️ reset date ke default sesuai role
+      final now = DateTime.now();
+      if (roleCode == 'petugas') {
+        startDate = now.subtract(const Duration(days: 7));
+        endDate = now;
+      } else {
+        startDate = null;
+        endDate = null;
+      }
+
       currentPage = 1;
       _applyFilterAndPagination();
     });
@@ -295,13 +331,14 @@ class _HomePageKAIState extends State<HomePageKAI> {
               userName: userName,
               roleName: roleName,
               roleAccess: roleAccess!,
+              roleCode: roleCode,
             ),
       // 🔥 TAMBAHAN REFRESH (SATU-SATUNYA PERUBAHAN)
       body: SafeArea(
         child: _shouldLockPage()
             ? _buildShiftLockedView()
             : RefreshIndicator(
-                onRefresh: _loadRedeem,
+                onRefresh: () => _loadRedeem(userStationId),
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(
@@ -809,12 +846,6 @@ class _HomePageKAIState extends State<HomePageKAI> {
 
   void _confirmDelete(String id) {
     final TextEditingController noteController = TextEditingController();
-    final TextEditingController bookingController = TextEditingController();
-    final TextEditingController trainNumberController = TextEditingController();
-    final TextEditingController ticketNumberController =
-        TextEditingController();
-
-    DateTime? departureDate;
     final formKey = GlobalKey<FormState>();
     String? selectedReason;
 
@@ -849,10 +880,6 @@ class _HomePageKAIState extends State<HomePageKAI> {
                           child: Text('Salah input nomor seri kartu'),
                         ),
                         DropdownMenuItem(
-                          value: 'Pembatalan Kereta',
-                          child: Text('Pembatalan Kereta'),
-                        ),
-                        DropdownMenuItem(
                           value: 'Lainnya',
                           child: Text('Lainnya'),
                         ),
@@ -863,156 +890,11 @@ class _HomePageKAIState extends State<HomePageKAI> {
 
                           /// reset semua field
                           noteController.clear();
-                          bookingController.clear();
-                          trainNumberController.clear();
-                          ticketNumberController.clear();
-                          departureDate = null;
                         });
                       },
                       validator: (v) =>
                           v == null ? 'Alasan wajib dipilih' : null,
                     ),
-
-                    /// ==============================
-                    /// PEMBATALAN KERETA
-                    /// ==============================
-                    if (selectedReason == 'Pembatalan Kereta') ...[
-                      const SizedBox(height: 12),
-
-                      /// KODE BOOKING
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Kode Booking Kereta",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: bookingController,
-                            decoration: const InputDecoration(
-                              hintText: "Masukkan kode booking",
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Kode booking wajib diisi';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// NOMOR KA
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Nomor KA",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: trainNumberController,
-                            decoration: const InputDecoration(
-                              hintText: "Contoh: G1234",
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Nomor KA wajib diisi';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// NOMOR TIKET
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Nomor Tiket",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: ticketNumberController,
-                            decoration: const InputDecoration(
-                              hintText: "Masukkan nomor tiket",
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Nomor tiket wajib diisi';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// TANGGAL KEBERANGKATAN
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Tanggal Keberangkatan",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          InkWell(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.now(),
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2100),
-                              );
-
-                              if (picked != null) {
-                                setModalState(() {
-                                  departureDate = picked;
-                                });
-                              }
-                            },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                hintText: "Pilih tanggal keberangkatan",
-                                border: OutlineInputBorder(),
-                              ),
-                              child: Text(
-                                departureDate == null
-                                    ? "Pilih tanggal keberangkatan"
-                                    : DateFormat(
-                                        'dd MMM yyyy',
-                                      ).format(departureDate!),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
 
                     /// ==============================
                     /// ALASAN LAINNYA
@@ -1056,46 +938,11 @@ class _HomePageKAIState extends State<HomePageKAI> {
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
 
-              if (selectedReason == 'Pembatalan Kereta' &&
-                  departureDate == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Tanggal keberangkatan wajib dipilih"),
-                  ),
-                );
-                return;
-              }
-
               String notes = '';
-              String? trainBookCode;
-              String? trainNumber;
-              String? ticketNumber;
-              String? departureDateString;
 
-              /// ===============================
-              /// PEMBATALAN KERETA
-              /// ===============================
-              if (selectedReason == 'Pembatalan Kereta') {
-                trainBookCode = bookingController.text.trim();
-                trainNumber = trainNumberController.text.trim();
-                ticketNumber = ticketNumberController.text.trim();
-
-                departureDateString = DateFormat(
-                  'yyyy-MM-dd',
-                ).format(departureDate!);
-
-                notes = 'Pembatalan Kereta';
-              }
-              /// ===============================
-              /// SALAH INPUT
-              /// ===============================
-              else if (selectedReason == 'Salah input nomor seri kartu') {
+              if (selectedReason == 'Salah input nomor seri kartu') {
                 notes = 'Salah input nomor seri kartu';
-              }
-              /// ===============================
-              /// LAINNYA
-              /// ===============================
-              else if (selectedReason == 'Lainnya') {
+              } else if (selectedReason == 'Lainnya') {
                 notes = noteController.text.trim();
               }
 
@@ -1109,14 +956,9 @@ class _HomePageKAIState extends State<HomePageKAI> {
                   id: id,
                   reason: selectedReason!,
                   notes: notes,
-
-                  trainBookCode: trainBookCode,
-                  trainNumber: trainNumber,
-                  ticketNumber: ticketNumber,
-                  departureDate: departureDateString,
                 );
 
-                await _loadRedeem();
+                await _loadRedeem(userStationId);
 
                 if (!mounted) return;
 

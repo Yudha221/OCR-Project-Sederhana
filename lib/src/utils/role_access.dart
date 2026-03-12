@@ -33,11 +33,10 @@ class RoleAccess {
     }
   }
 
-  /// ================= Pembatalan =================
+  /// ================= Delate =================
   bool get canDelete {
     switch (roleCode) {
       case 'superadmin':
-      case 'petugas':
       case 'supervisor':
         return true;
       default:
@@ -94,6 +93,18 @@ class RoleAccess {
   bool get canViewCustomer {
     switch (roleCode) {
       case 'contact_center':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /// ================= RIWAYAT PEMBATALAN =================
+  bool get canViewCancellationHistory {
+    switch (roleCode) {
+      case 'superadmin':
+      case 'supervisor':
+      case 'petugas':
         return true;
       default:
         return false;

@@ -57,7 +57,6 @@ class VoucherDeleteController {
     _applyPagination();
   }
 
-  /// ================= PAGINATION =================
   void _applyPagination() {
     final start = (currentPage - 1) * rowsPerPage;
     final end = start + rowsPerPage;
@@ -67,6 +66,8 @@ class VoucherDeleteController {
       end > filteredData.length ? filteredData.length : end,
     );
   }
+
+  void rebuildPagination() => _applyPagination();
 
   void nextPage() {
     if (currentPage < totalPage) {
